@@ -16,6 +16,7 @@ import {
 } from "@/lib/api/notifications"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
+import { useNotificationsRealtime } from "@/hooks/use-notifications-realtime"
 
 export function NotificationBell() {
   const [unreadCount, setUnreadCount] = useState(0)
@@ -28,19 +29,25 @@ export function NotificationBell() {
 
   useEffect(() => {
     if (!userId) return
-
     loadUnreadCount()
-
-    // Подписка на real-time обновления
-    const unsubscribe = subscribeToNotifications(userId, (notification) => {
-      setUnreadCount((prev) => prev + 1)
-      toast(notification.title, {
-        description: notification.message,
-      })
-    })
-
-    return unsubscribe
   }, [userId])
+
+  // Realtime подписка на уведомления
+  useNotificationsRealtime({
+    userId: userId || "",
+    onNewNotification: (notification) => {
+      setUnreadCount((prev) => prev + 1)
+      toast.info("Новое уведомление", {
+        description: notification.content,
+      })
+    },
+    onNotificationsChange: () => {
+      // Перезагрузить счётчик при изменениях
+      if (userId) {
+        loadUnreadCount()
+      }
+    },
+  })
 
   async function loadUser() {
     const supabase = createClient()

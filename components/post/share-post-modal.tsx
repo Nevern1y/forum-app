@@ -99,7 +99,6 @@ export function SharePostModal({ postId, postTitle, onClose }: SharePostModalPro
 
       toast.success("Пост отправлен!")
       onClose()
-      router.push(`/messages/${friendUsername}`)
     } catch (error) {
       console.error("Error sharing post:", error)
       toast.error("Ошибка при отправке")

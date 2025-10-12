@@ -110,16 +110,69 @@ export function ChatWindow({ currentUserId, otherUser, embedded = false, onClose
           filter: `conversation_id=eq.${conversationId}`,
         },
         async (payload) => {
-          const newMessage = payload.new
+          const newMessage = payload.new as any
 
-          // Автоматически пометить как прочитанное если это не наше сообщение
-          if (newMessage.receiver_id === currentUserId) {
-            await markMessagesAsRead(conversationId, currentUserId)
+          // Загружаем полные данные сообщения с профилем отправителя
+          const { data: fullMessage } = await supabase
+            .from("direct_messages")
+            .select(`
+              *,
+              sender:sender_id (id, username, display_name, avatar_url),
+              shared_post:shared_post_id (
+                id, 
+                title, 
+                content,
+                views
+              )
+            `)
+            .eq("id", newMessage.id)
+            .single()
+
+          if (fullMessage) {
+            // Добавляем новое сообщение БЕЗ перезагрузки всех
+            setMessages(prev => [...prev, fullMessage])
+
+            // Автоматически пометить как прочитанное если это не наше сообщение
+            if (newMessage.receiver_id === currentUserId) {
+              await markMessagesAsRead(conversationId, currentUserId)
+            }
           }
-
-          // Перезагрузить сообщения
-          const msgs = await getMessages(conversationId)
-          setMessages(msgs)
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "direct_messages",
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        async (payload) => {
+          const updatedMessage = payload.new as any
+          
+          // Обновляем сообщение в списке
+          setMessages(prev => 
+            prev.map(msg => 
+              msg.id === updatedMessage.id 
+                ? { ...msg, ...updatedMessage } 
+                : msg
+            )
+          )
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "DELETE",
+          schema: "public",
+          table: "direct_messages",
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        (payload) => {
+          const deletedMessage = payload.old as any
+          
+          // Удаляем сообщение из списка
+          setMessages(prev => prev.filter(msg => msg.id !== deletedMessage.id))
         }
       )
       .subscribe()

@@ -38,23 +38,68 @@ export function WhatsAppStyleMessages({ userId, currentUser }: WhatsAppStyleMess
 
     // Real-time обновление списка чатов
     const supabase = createClient()
-    const channel = supabase
-      .channel("conversations-list")
+    
+    // Подписка на новые сообщения
+    const messagesChannel = supabase
+      .channel("conversations-list-messages")
       .on(
         "postgres_changes",
         {
-          event: "*",
+          event: "INSERT",
           schema: "public",
           table: "direct_messages",
         },
-        () => {
-          loadData()
+        async (payload) => {
+          const newMessage = payload.new as any
+          
+          // Обновляем только конкретный чат
+          setConversations(prev => {
+            return prev.map(conv => {
+              if (conv.id === newMessage.conversation_id) {
+                return {
+                  ...conv,
+                  last_message_at: newMessage.created_at,
+                  last_message_preview: newMessage.content,
+                  last_message: {
+                    ...newMessage,
+                    shared_post: null,
+                  },
+                }
+              }
+              return conv
+            })
+          })
+        }
+      )
+      .subscribe()
+
+    // Подписка на обновления бесед
+    const conversationsChannel = supabase
+      .channel("conversations-updates")
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "conversations",
+        },
+        (payload) => {
+          const updatedConv = payload.new as any
+          
+          setConversations(prev =>
+            prev.map(conv =>
+              conv.id === updatedConv.id
+                ? { ...conv, ...updatedConv }
+                : conv
+            )
+          )
         }
       )
       .subscribe()
 
     return () => {
-      supabase.removeChannel(channel)
+      supabase.removeChannel(messagesChannel)
+      supabase.removeChannel(conversationsChannel)
     }
   }, [userId])
 
