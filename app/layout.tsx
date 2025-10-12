@@ -12,11 +12,15 @@ import { PresenceProvider } from "@/components/presence/presence-provider"
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  display: "swap", // Оптимизация загрузки шрифта
+  preload: true,
 })
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  display: "swap",
+  preload: true,
 })
 
 export const metadata: Metadata = {

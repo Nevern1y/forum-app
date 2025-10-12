@@ -8,12 +8,62 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  // Оптимизация изображений
   images: {
-    unoptimized: true,
+    formats: ['image/avif', 'image/webp'],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    minimumCacheTTL: 60,
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**.supabase.co',
+      },
+    ],
+  },
+  // Экспериментальные оптимизации
+  experimental: {
+    optimizePackageImports: [
+      'lucide-react', 
+      '@supabase/supabase-js',
+      '@radix-ui/react-dialog',
+      '@radix-ui/react-dropdown-menu',
+      '@radix-ui/react-popover',
+      '@radix-ui/react-select',
+      'date-fns',
+      'react-markdown',
+    ],
+    scrollRestoration: true,
+    // Turbopack для dev
+    turbo: {
+      rules: {
+        '*.svg': {
+          loaders: ['@svgr/webpack'],
+          as: '*.js',
+        },
+      },
+    },
+  },
+  // Сжатие
+  compress: true,
+  // Оптимизация бандла
+  swcMinify: true,
+  // Production source maps (только для важных файлов)
+  productionBrowserSourceMaps: false,
+  // Оптимизация шрифтов
+  optimizeFonts: true,
+  // Модульность
+  modularizeImports: {
+    'lucide-react': {
+      transform: 'lucide-react/dist/esm/icons/{{kebabCase member}}',
+    },
   },
 }
 
-export default withSentryConfig(nextConfig, {
+// Отключаем Sentry в dev режиме для ускорения
+const isDev = process.env.NODE_ENV === 'development'
+
+export default isDev ? nextConfig : withSentryConfig(nextConfig, {
   // For all available options, see:
   // https://github.com/getsentry/sentry-webpack-plugin#options
 
