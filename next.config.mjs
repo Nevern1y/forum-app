@@ -48,12 +48,7 @@ const nextConfig = {
   compress: true,
   // Production source maps (только для важных файлов)
   productionBrowserSourceMaps: false,
-  // Модульность
-  modularizeImports: {
-    'lucide-react': {
-      transform: 'lucide-react/dist/esm/icons/{{kebabCase member}}',
-    },
-  },
+
 }
 
 // Отключаем Sentry в dev режиме для ускорения
