@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
+import { useVirtualizer } from "@tanstack/react-virtual"
 import { createClient } from "@/lib/supabase/client"
 import { PostCard } from "./post-card"
 import { PostSkeletonList } from "@/components/skeletons/post-skeleton"
@@ -44,6 +45,15 @@ export function InfinitePostList({ initialPosts, sortBy }: InfinitePostListProps
   const [newPostsCount, setNewPostsCount] = useState(0)
   const observerRef = useRef<IntersectionObserver | null>(null)
   const loadMoreRef = useRef<HTMLDivElement | null>(null)
+  const parentRef = useRef<HTMLDivElement>(null)
+
+  // Виртуализация для оптимизации рендеринга больших списков
+  const rowVirtualizer = useVirtualizer({
+    count: posts.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 200, // Средняя высота поста
+    overscan: 5, // Рендерить 5 дополнительных элементов за пределами видимости
+  })
 
   // Realtime подписка на новые посты
   usePostsRealtime({
@@ -90,10 +100,10 @@ export function InfinitePostList({ initialPosts, sortBy }: InfinitePostListProps
     },
   })
 
-  const loadMorePosts = async () => {
+  const loadMorePosts = async (prefetch = false) => {
     if (isLoading || !hasMore) return
 
-    setIsLoading(true)
+    if (!prefetch) setIsLoading(true)
     const supabase = createClient()
 
     try {
@@ -133,9 +143,23 @@ export function InfinitePostList({ initialPosts, sortBy }: InfinitePostListProps
       console.error("Error loading more posts:", error)
       setHasMore(false)
     } finally {
-      setIsLoading(false)
+      if (!prefetch) setIsLoading(false)
     }
   }
+
+  // Prefetch следующей страницы когда пользователь приближается к концу
+  useEffect(() => {
+    const items = rowVirtualizer.getVirtualItems()
+    if (items.length === 0) return
+
+    const lastItem = items[items.length - 1]
+    // Если просмотрено 80% постов - начать prefetch
+    if (lastItem && lastItem.index >= posts.length - Math.ceil(POSTS_PER_PAGE * 0.2)) {
+      if (hasMore && !isLoading) {
+        loadMorePosts(true) // Тихая предзагрузка
+      }
+    }
+  }, [rowVirtualizer.getVirtualItems(), posts.length, hasMore, isLoading])
 
   useEffect(() => {
     // Setup intersection observer for infinite scroll
@@ -198,8 +222,10 @@ export function InfinitePostList({ initialPosts, sortBy }: InfinitePostListProps
     }
   }
 
+  const virtualItems = rowVirtualizer.getVirtualItems()
+
   return (
-    <div className="space-y-4">
+    <div ref={parentRef} className="space-y-4" style={{ overflowY: 'auto', maxHeight: '100vh' }}>
       {/* Кнопка для загрузки новых постов */}
       {newPostsCount > 0 && sortBy !== "recent" && (
         <Button
@@ -211,9 +237,43 @@ export function InfinitePostList({ initialPosts, sortBy }: InfinitePostListProps
         </Button>
       )}
 
-      {posts.map((post) => (
-        <PostCard key={post.id} post={post} />
-      ))}
+      {/* Empty state */}
+      {posts.length === 0 && !isLoading && (
+        <div className="text-center py-12 text-muted-foreground">
+          <p>Нет постов для отображения</p>
+        </div>
+      )}
+
+      {/* Виртуализированный список постов */}
+      {posts.length > 0 && (
+        <div
+          style={{
+            height: `${rowVirtualizer.getTotalSize()}px`,
+            width: '100%',
+            position: 'relative',
+          }}
+        >
+          {virtualItems.map((virtualItem) => {
+            const post = posts[virtualItem.index]
+            return (
+              <div
+                key={post.id}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  transform: `translateY(${virtualItem.start}px)`,
+                }}
+                ref={rowVirtualizer.measureElement}
+                data-index={virtualItem.index}
+              >
+                <PostCard post={post} />
+              </div>
+            )
+          })}
+        </div>
+      )}
 
       {/* Loading indicator */}
       {isLoading && <PostSkeletonList count={3} />}
@@ -245,13 +305,6 @@ export function InfinitePostList({ initialPosts, sortBy }: InfinitePostListProps
               "Загрузить еще"
             )}
           </Button>
-        </div>
-      )}
-
-      {/* Empty state */}
-      {posts.length === 0 && !isLoading && (
-        <div className="text-center py-12 text-muted-foreground">
-          <p>Нет постов для отображения</p>
         </div>
       )}
     </div>

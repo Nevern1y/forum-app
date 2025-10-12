@@ -1,4 +1,48 @@
 import { withSentryConfig } from '@sentry/nextjs';
+import withPWAInit from '@ducanh2912/next-pwa';
+
+const withPWA = withPWAInit({
+  dest: 'public',
+  disable: process.env.NODE_ENV === 'development',
+  register: true,
+  skipWaiting: true,
+  runtimeCaching: [
+    {
+      urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
+      handler: 'NetworkFirst',
+      options: {
+        cacheName: 'supabase-api',
+        expiration: {
+          maxEntries: 50,
+          maxAgeSeconds: 24 * 60 * 60 // 24 hours
+        },
+        networkTimeoutSeconds: 10
+      }
+    },
+    {
+      urlPattern: /\.(?:jpg|jpeg|png|gif|webp|avif|svg)$/i,
+      handler: 'CacheFirst',
+      options: {
+        cacheName: 'images',
+        expiration: {
+          maxEntries: 100,
+          maxAgeSeconds: 30 * 24 * 60 * 60 // 30 days
+        }
+      }
+    },
+    {
+      urlPattern: /\/_next\/static\/.*/i,
+      handler: 'CacheFirst',
+      options: {
+        cacheName: 'next-static',
+        expiration: {
+          maxEntries: 60,
+          maxAgeSeconds: 365 * 24 * 60 * 60 // 1 year
+        }
+      }
+    }
+  ]
+});
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -54,7 +98,10 @@ const nextConfig = {
 // Отключаем Sentry в dev режиме для ускорения
 const isDev = process.env.NODE_ENV === 'development'
 
-export default isDev ? nextConfig : withSentryConfig(nextConfig, {
+// Применяем PWA обёртку
+const configWithPWA = withPWA(nextConfig)
+
+export default isDev ? configWithPWA : withSentryConfig(configWithPWA, {
   // For all available options, see:
   // https://github.com/getsentry/sentry-webpack-plugin#options
 

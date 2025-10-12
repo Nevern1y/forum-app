@@ -3,6 +3,9 @@ import { redirect } from "next/navigation"
 import { PostList } from "@/components/feed/post-list"
 import { QuickPostCreate } from "@/components/post/quick-post-create"
 
+// Кеширование ленты на 30 секунд для быстрой загрузки
+export const revalidate = 30
+
 export default async function FeedPage({
   searchParams,
 }: {

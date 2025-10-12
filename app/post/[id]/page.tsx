@@ -15,6 +15,9 @@ import { PostMenu } from "@/components/post/post-menu"
 import { MediaGallery } from "@/components/media/media-gallery"
 import { AudioPlayer } from "@/components/media/audio-player"
 
+// Кеширование страницы на 60 секунд для ускорения загрузки
+export const revalidate = 60
+
 export default async function PostPage({
   params,
 }: {
@@ -30,41 +33,46 @@ export default async function PostPage({
     redirect("/auth/login")
   }
 
-  // Increment view count
-  await supabase.rpc("increment_post_views", { post_id: id })
-
-  // Get post data
-  const { data: post, error } = await supabase
-    .from("posts")
-    .select(`
-      *,
-      profiles:author_id (username, display_name, avatar_url, reputation),
-      post_tags (
-        tags (name)
-      )
-    `)
-    .eq("id", id)
-    .single()
+  // Выполняем все запросы параллельно для ускорения загрузки
+  const [
+    { data: post, error },
+    { data: userReaction },
+    { data: bookmark },
+  ] = await Promise.all([
+    // Get post data
+    supabase
+      .from("posts")
+      .select(`
+        *,
+        profiles:author_id (username, display_name, avatar_url, reputation),
+        post_tags (
+          tags (name)
+        )
+      `)
+      .eq("id", id)
+      .single(),
+    // Check user's reaction
+    supabase
+      .from("post_reactions")
+      .select("reaction_type")
+      .eq("post_id", id)
+      .eq("user_id", user.id)
+      .single(),
+    // Check if bookmarked
+    supabase
+      .from("bookmarks")
+      .select("*")
+      .eq("post_id", id)
+      .eq("user_id", user.id)
+      .single(),
+  ])
 
   if (error || !post) {
     notFound()
   }
 
-  // Check user's reaction
-  const { data: userReaction } = await supabase
-    .from("post_reactions")
-    .select("reaction_type")
-    .eq("post_id", id)
-    .eq("user_id", user.id)
-    .single()
-
-  // Check if bookmarked
-  const { data: bookmark } = await supabase
-    .from("bookmarks")
-    .select("*")
-    .eq("post_id", id)
-    .eq("user_id", user.id)
-    .single()
+  // Increment view count (не блокирующий - fire and forget)
+  supabase.rpc("increment_post_views", { post_id: id }).then()
 
   const profile = post.profiles
   const tags = post.post_tags.map((pt) => pt.tags?.name).filter(Boolean)

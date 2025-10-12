@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, memo } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import Link from "next/link"
 import { formatDistanceToNow } from "date-fns"
@@ -68,7 +68,7 @@ const stripMarkdown = (text: string): string => {
     .trim()
 }
 
-export function PostCard({ post }: PostCardProps) {
+const PostCardComponent = ({ post }: PostCardProps) => {
   const profile = post.profiles
   const tags = post.post_tags.map((pt) => pt.tags?.name).filter(Boolean)
   
@@ -137,14 +137,21 @@ export function PostCard({ post }: PostCardProps) {
     }
     
     if (isLiking) return
+
+    // Проверка на наличие post.id
+    if (!post?.id) {
+      console.error('Post ID is missing')
+      toast.error('Ошибка: не удалось найти пост')
+      return
+    }
+    
+    setIsLiking(true)
+    setLastLikeTime(now)
     
     // Optimistic update - обновляем только isLiked, счётчик обновится через realtime!
     const newIsLiked = !isLiked
+    const previousIsLiked = isLiked
     setIsLiked(newIsLiked)
-    // НЕ меняем likesCount здесь - он обновится автоматически через realtime
-    // Это предотвращает двойное изменение (оптимистичное + realtime)
-    setIsLiking(true)
-    setLastLikeTime(now)
     
     try {
       const supabase = createClient()
@@ -152,14 +159,15 @@ export function PostCard({ post }: PostCardProps) {
       
       if (authError) {
         console.error('Auth error:', authError)
-        throw authError
+        setIsLiked(previousIsLiked) // Revert
+        toast.error('Ошибка авторизации')
+        return
       }
       
       if (!user) {
         console.warn('User not authenticated')
+        setIsLiked(previousIsLiked) // Revert
         toast.error('Войдите, чтобы лайкать посты')
-        // Revert if not authenticated (только isLiked)
-        setIsLiked(!newIsLiked)
         return
       }
 
@@ -188,7 +196,9 @@ export function PostCard({ post }: PostCardProps) {
             hint: error.hint,
             code: error.code
           })
-          throw error
+          setIsLiked(previousIsLiked) // Revert
+          toast.error('Ошибка при добавлении лайка')
+          return
         }
         console.log('Like added:', data)
       } else {
@@ -207,7 +217,9 @@ export function PostCard({ post }: PostCardProps) {
             hint: error.hint,
             code: error.code
           })
-          throw error
+          setIsLiked(previousIsLiked) // Revert
+          toast.error('Ошибка при удалении лайка')
+          return
         }
         console.log('Like removed:', data)
       }
@@ -219,8 +231,8 @@ export function PostCard({ post }: PostCardProps) {
         hint: error?.hint,
         code: error?.code
       })
-      // Revert on error (только isLiked, счётчик останется как в БД)
-      setIsLiked(!newIsLiked)
+      // Revert on error
+      setIsLiked(previousIsLiked)
       toast.error('Ошибка при обновлении лайка')
     } finally {
       setIsLiking(false)
@@ -354,3 +366,12 @@ export function PostCard({ post }: PostCardProps) {
     </article>
   )
 }
+
+// Мемоизация для предотвращения ненужных ре-рендеров
+export const PostCard = memo(PostCardComponent, (prevProps, nextProps) => {
+  // Перерендерить только если изменился сам пост
+  return prevProps.post.id === nextProps.post.id &&
+         prevProps.post.likes === nextProps.post.likes &&
+         prevProps.post.comment_count === nextProps.post.comment_count &&
+         prevProps.post.user_has_liked === nextProps.post.user_has_liked
+})

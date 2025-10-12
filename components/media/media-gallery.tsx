@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, memo } from "react"
 import { createPortal } from "react-dom"
 import Image from "next/image"
 import { X, ChevronLeft, ChevronRight, Download } from "lucide-react"
@@ -14,7 +14,7 @@ interface MediaGalleryProps {
   contentSize?: 'small' | 'medium' | 'large'
 }
 
-export function MediaGallery({ images, className = "", compact = false, disableHover = false, contentSize = 'medium' }: MediaGalleryProps) {
+const MediaGalleryComponent = ({ images, className = "", compact = false, disableHover = false, contentSize = 'medium' }: MediaGalleryProps) => {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
   const [isClosing, setIsClosing] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -136,6 +136,9 @@ export function MediaGallery({ images, className = "", compact = false, disableH
                 !disableHover && "transition-opacity duration-300 group-hover:opacity-90"
               )}
               sizes={compact ? "200px" : images.length === 1 ? "800px" : "400px"}
+              loading="lazy"
+              placeholder="blur"
+              blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iI2VlZSIvPjwvc3ZnPg=="
             />
             {hiddenCount > 0 && index === displayImages.length - 1 && (
               <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
@@ -239,3 +242,6 @@ export function MediaGallery({ images, className = "", compact = false, disableH
     </>
   )
 }
+
+// Мемоизация для оптимизации рендеринга медиа-галереи
+export const MediaGallery = memo(MediaGalleryComponent)

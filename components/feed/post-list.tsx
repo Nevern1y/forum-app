@@ -7,6 +7,9 @@ interface PostListProps {
 
 export async function PostList({ sortBy }: PostListProps) {
   const supabase = await createClient()
+  
+  // Получаем текущего пользователя
+  const { data: { user } } = await supabase.auth.getUser()
 
   let query = supabase.from("posts").select(`
       *,
@@ -20,15 +23,13 @@ export async function PostList({ sortBy }: PostListProps) {
   if (sortBy === "popular") {
     query = query.order("likes", { ascending: false })
   } else if (sortBy === "discussed") {
-    // For discussed, we'll order by a combination of views and comments
-    // Since we can't easily count comments in a single query, we'll use views as proxy
     query = query.order("views", { ascending: false })
   } else {
     query = query.order("created_at", { ascending: false })
   }
 
   const { data: posts } = await query.limit(20)
-
+  
   if (!posts || posts.length === 0) {
     return (
       <div className="text-center py-16">
@@ -37,9 +38,48 @@ export async function PostList({ sortBy }: PostListProps) {
     )
   }
 
+  // Параллельно загружаем данные о лайках и комментариях для всех постов
+  const postIds = posts.map(p => p.id)
+  
+  const [
+    { data: userReactions },
+    { data: commentCounts }
+  ] = await Promise.all([
+    // Получаем лайки пользователя для всех постов одним запросом
+    user ? supabase
+      .from("post_reactions")
+      .select("post_id, reaction_type")
+      .eq("user_id", user.id)
+      .in("post_id", postIds) : Promise.resolve({ data: [] }),
+    // Получаем количество комментариев для всех постов одним запросом
+    supabase
+      .from("comments")
+      .select("post_id")
+      .in("post_id", postIds)
+      .then(({ data }) => {
+        const counts = data?.reduce((acc, comment) => {
+          acc[comment.post_id] = (acc[comment.post_id] || 0) + 1
+          return acc
+        }, {} as Record<string, number>)
+        return { data: counts }
+      })
+  ])
+
+  // Создаём словари для быстрого доступа
+  const reactionsMap = new Map(
+    userReactions?.map(r => [r.post_id, r.reaction_type === 'like']) || []
+  )
+
+  // Добавляем данные к постам
+  const postsWithUserData = posts.map(post => ({
+    ...post,
+    user_has_liked: reactionsMap.get(post.id) || false,
+    comment_count: commentCounts?.[post.id] || 0
+  }))
+
   return (
     <div className="divide-y divide-border">
-      {posts.map((post) => (
+      {postsWithUserData.map((post) => (
         <PostCard key={post.id} post={post} />
       ))}
     </div>

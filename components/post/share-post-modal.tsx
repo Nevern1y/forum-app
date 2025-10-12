@@ -16,7 +16,6 @@ import { toast } from "sonner"
 import { getFriends } from "@/lib/api/friends"
 import { getOrCreateConversation, sendMessage } from "@/lib/api/messages"
 import { createClient } from "@/lib/supabase/client"
-import { useRouter } from "next/navigation"
 
 interface SharePostModalProps {
   postId: string
@@ -25,7 +24,6 @@ interface SharePostModalProps {
 }
 
 export function SharePostModal({ postId, postTitle, onClose }: SharePostModalProps) {
-  const router = useRouter()
   const [friends, setFriends] = useState<any[]>([])
   const [filteredFriends, setFilteredFriends] = useState<any[]>([])
   const [searchQuery, setSearchQuery] = useState("")
