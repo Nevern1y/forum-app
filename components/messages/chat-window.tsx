@@ -235,9 +235,8 @@ export function ChatWindow({ currentUserId, otherUser, embedded = false, onClose
       setShowImageUploader(false)
       setShowVoiceRecorder(false)
 
-      // Перезагрузить сообщения
-      const msgs = await getMessages(conversationId)
-      setMessages(msgs)
+      // Сообщение появится автоматически через realtime подписку!
+      // Не нужно перезагружать все сообщения
     } catch (error) {
       console.error("Error sending message:", error)
       toast.error("Ошибка отправки сообщения")
