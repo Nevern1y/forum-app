@@ -76,22 +76,31 @@ export function PostCard({ post }: PostCardProps) {
   const [likesCount, setLikesCount] = useState(post.likes)
   const [isLiking, setIsLiking] = useState(false)
   const [lastLikeTime, setLastLikeTime] = useState(0)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
-  // Realtime подписка на реакции
+  // Получаем ID текущего пользователя
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setCurrentUserId(user?.id || null)
+    })
+  }, [])
+
+  // Realtime подписка на реакции - ОПТИМИЗИРОВАНО!
   useReactionsRealtime({
     postId: post.id,
-    onReactionsChange: async () => {
-      // Обновляем счетчик лайков
-      const supabase = createClient()
-      const { count } = await supabase
-        .from("post_reactions")
-        .select("*", { count: "exact", head: true })
-        .eq("post_id", post.id)
-        .eq("reaction_type", "like")
-
-      if (count !== null) {
-        setLikesCount(count)
+    onNewReaction: (reaction) => {
+      // Увеличиваем счетчик (мгновенно, без запроса к БД!)
+      setLikesCount(prev => prev + 1)
+      
+      // Если это наш лайк - обновляем статус
+      if (reaction.user_id === currentUserId) {
+        setIsLiked(true)
       }
+    },
+    onDeleteReaction: (reactionId) => {
+      // Уменьшаем счетчик (мгновенно!)
+      setLikesCount(prev => Math.max(0, prev - 1))
     },
   })
 
