@@ -46,12 +46,8 @@ const nextConfig = {
   },
   // Сжатие
   compress: true,
-  // Оптимизация бандла
-  swcMinify: true,
   // Production source maps (только для важных файлов)
   productionBrowserSourceMaps: false,
-  // Оптимизация шрифтов
-  optimizeFonts: true,
   // Модульность
   modularizeImports: {
     'lucide-react': {
