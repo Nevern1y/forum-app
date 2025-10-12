@@ -104,11 +104,12 @@ export function PostCard({ post }: PostCardProps) {
     },
   })
 
-  // Синхронизируем состояние при изменении пропсов
+  // Синхронизируем состояние ТОЛЬКО при смене поста (не при каждом изменении likes!)
+  // Это предотвращает рассинхронизацию между предпросмотром и полным постом
   useEffect(() => {
     setIsLiked(post.user_has_liked || false)
     setLikesCount(post.likes || 0)
-  }, [post.id, post.user_has_liked, post.likes])
+  }, [post.id]) // Только при смене post.id, НЕ при изменении likes!
   
   // Display plain text (no markdown) content for preview
   const plainContent = post.content ? stripMarkdown(post.content) : ''
@@ -137,10 +138,11 @@ export function PostCard({ post }: PostCardProps) {
     
     if (isLiking) return
     
-    // Optimistic update
+    // Optimistic update - обновляем только isLiked, счётчик обновится через realtime!
     const newIsLiked = !isLiked
     setIsLiked(newIsLiked)
-    setLikesCount(prev => newIsLiked ? prev + 1 : prev - 1)
+    // НЕ меняем likesCount здесь - он обновится автоматически через realtime
+    // Это предотвращает двойное изменение (оптимистичное + realtime)
     setIsLiking(true)
     setLastLikeTime(now)
     
@@ -156,9 +158,8 @@ export function PostCard({ post }: PostCardProps) {
       if (!user) {
         console.warn('User not authenticated')
         toast.error('Войдите, чтобы лайкать посты')
-        // Revert if not authenticated
+        // Revert if not authenticated (только isLiked)
         setIsLiked(!newIsLiked)
-        setLikesCount(prev => newIsLiked ? prev - 1 : prev + 1)
         return
       }
 
@@ -218,9 +219,9 @@ export function PostCard({ post }: PostCardProps) {
         hint: error?.hint,
         code: error?.code
       })
-      // Revert on error
+      // Revert on error (только isLiked, счётчик останется как в БД)
       setIsLiked(!newIsLiked)
-      setLikesCount(prev => newIsLiked ? prev - 1 : prev + 1)
+      toast.error('Ошибка при обновлении лайка')
     } finally {
       setIsLiking(false)
     }
