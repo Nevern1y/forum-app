@@ -21,7 +21,7 @@
 ☑ direct_messages        - для чата (ВАЖНО!)
 ☑ conversations          - для списка чатов
 ☑ notifications          - для уведомлений
-☑ friend_requests        - для заявок в друзья
+☑ friendships            - для заявок в друзья (НЕ friend_requests!)
 ```
 
 **Как включить:**

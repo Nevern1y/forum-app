@@ -2,19 +2,20 @@
 
 import { useRealtime } from "./use-realtime"
 
-interface FriendRequest {
+interface Friendship {
   id: string
-  requester_id: string
-  receiver_id: string
-  status: "pending" | "accepted" | "rejected"
+  user_id: string
+  friend_id: string
+  status: "pending" | "accepted" | "rejected" | "blocked"
   created_at: string
+  accepted_at: string | null
 }
 
 interface UseFriendsRealtimeOptions {
   userId: string
-  onNewRequest?: (request: FriendRequest) => void
-  onAcceptedRequest?: (request: FriendRequest) => void
-  onRejectedRequest?: (request: FriendRequest) => void
+  onNewRequest?: (request: Friendship) => void
+  onAcceptedRequest?: (request: Friendship) => void
+  onRejectedRequest?: (request: Friendship) => void
   onFriendsChange?: () => void
 }
 
@@ -28,12 +29,12 @@ export function useFriendsRealtime({
   onRejectedRequest,
   onFriendsChange,
 }: UseFriendsRealtimeOptions) {
-  useRealtime<FriendRequest>({
-    table: "friend_requests",
-    filter: `or(requester_id.eq.${userId},receiver_id.eq.${userId})`,
+  useRealtime<Friendship>({
+    table: "friendships",
+    filter: `or(user_id.eq.${userId},friend_id.eq.${userId})`,
     onInsert: (request) => {
-      // Новая заявка только если я - получатель
-      if (request.receiver_id === userId) {
+      // Новая заявка только если я - получатель (friend_id)
+      if (request.friend_id === userId) {
         onNewRequest?.(request)
         onFriendsChange?.()
       }
