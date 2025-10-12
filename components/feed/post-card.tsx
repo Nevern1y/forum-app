@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import Link from "next/link"
 import { formatDistanceToNow } from "date-fns"
@@ -11,6 +11,7 @@ import { AudioPlayerCompact } from "@/components/media/audio-player-compact"
 import { SharePostButton } from "@/components/post/share-post-button"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
+import { useReactionsRealtime } from "@/hooks/use-reactions-realtime"
 
 interface PostCardProps {
   post: {
@@ -75,6 +76,30 @@ export function PostCard({ post }: PostCardProps) {
   const [likesCount, setLikesCount] = useState(post.likes)
   const [isLiking, setIsLiking] = useState(false)
   const [lastLikeTime, setLastLikeTime] = useState(0)
+
+  // Realtime подписка на реакции
+  useReactionsRealtime({
+    postId: post.id,
+    onReactionsChange: async () => {
+      // Обновляем счетчик лайков
+      const supabase = createClient()
+      const { count } = await supabase
+        .from("post_reactions")
+        .select("*", { count: "exact", head: true })
+        .eq("post_id", post.id)
+        .eq("reaction_type", "like")
+
+      if (count !== null) {
+        setLikesCount(count)
+      }
+    },
+  })
+
+  // Синхронизируем состояние при изменении пропсов
+  useEffect(() => {
+    setIsLiked(post.user_has_liked || false)
+    setLikesCount(post.likes || 0)
+  }, [post.id, post.user_has_liked, post.likes])
   
   // Display plain text (no markdown) content for preview
   const plainContent = post.content ? stripMarkdown(post.content) : ''

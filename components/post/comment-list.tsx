@@ -1,6 +1,10 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { CommentItem } from "@/components/post/comment-item"
+import { useCommentsRealtime } from "@/hooks/use-comments-realtime"
+import { createClient } from "@/lib/supabase/client"
+import { toast } from "sonner"
 
 interface Comment {
   id: string
@@ -23,7 +27,50 @@ interface CommentListProps {
   postId: string
 }
 
-export function CommentList({ comments, postId }: CommentListProps) {
+export function CommentList({ comments: initialComments, postId }: CommentListProps) {
+  const [comments, setComments] = useState<Comment[]>(initialComments)
+
+  // Realtime подписка на комментарии
+  useCommentsRealtime({
+    postId,
+    onNewComment: async (newComment) => {
+      // Загружаем полные данные комментария с профилем
+      const supabase = createClient()
+      const { data: fullComment } = await supabase
+        .from("comments")
+        .select(`
+          *,
+          profiles:author_id (username, display_name, avatar_url, reputation)
+        `)
+        .eq("id", newComment.id)
+        .single()
+
+      if (fullComment && !fullComment.parent_id) {
+        // Добавляем только комментарии верхнего уровня
+        setComments(prev => [fullComment, ...prev])
+        toast.success("Новый комментарий!")
+      }
+    },
+    onUpdateComment: (updatedComment) => {
+      setComments(prev =>
+        prev.map(comment =>
+          comment.id === updatedComment.id
+            ? { ...comment, ...updatedComment }
+            : comment
+        )
+      )
+    },
+    onDeleteComment: (commentId) => {
+      setComments(prev => prev.filter(comment => comment.id !== commentId))
+      toast.info("Комментарий удален")
+    },
+  })
+
+  // Синхронизируем с initialComments при изменении
+  useEffect(() => {
+    setComments(initialComments)
+  }, [initialComments])
+
   return (
     <div className="space-y-4">
       {comments.map((comment) => (

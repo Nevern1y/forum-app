@@ -6,6 +6,8 @@ import { PostCard } from "./post-card"
 import { PostSkeletonList } from "@/components/skeletons/post-skeleton"
 import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { usePostsRealtime } from "@/hooks/use-posts-realtime"
+import { toast } from "sonner"
 
 interface Post {
   id: string
@@ -39,8 +41,54 @@ export function InfinitePostList({ initialPosts, sortBy }: InfinitePostListProps
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(initialPosts.length === POSTS_PER_PAGE)
   const [isLoading, setIsLoading] = useState(false)
+  const [newPostsCount, setNewPostsCount] = useState(0)
   const observerRef = useRef<IntersectionObserver | null>(null)
   const loadMoreRef = useRef<HTMLDivElement | null>(null)
+
+  // Realtime подписка на новые посты
+  usePostsRealtime({
+    onNewPost: async (newPost) => {
+      // Загружаем полные данные поста
+      const supabase = createClient()
+      const { data: fullPost } = await supabase
+        .from("posts")
+        .select(`
+          *,
+          profiles:author_id (username, display_name, avatar_url, reputation),
+          post_tags (
+            tags (name)
+          )
+        `)
+        .eq("id", newPost.id)
+        .single()
+
+      if (fullPost) {
+        // Добавляем пост в начало только если сортировка по дате
+        if (sortBy === "recent") {
+          setPosts(prev => [fullPost, ...prev])
+          toast.success("Новый пост появился!")
+        } else {
+          // Для других сортировок просто показываем уведомление
+          setNewPostsCount(prev => prev + 1)
+        }
+      }
+    },
+    onUpdatePost: (updatedPost) => {
+      // Обновляем пост в списке
+      setPosts(prev => 
+        prev.map(post => 
+          post.id === updatedPost.id 
+            ? { ...post, ...updatedPost } 
+            : post
+        )
+      )
+    },
+    onDeletePost: (postId) => {
+      // Удаляем пост из списка
+      setPosts(prev => prev.filter(post => post.id !== postId))
+      toast.info("Пост был удален")
+    },
+  })
 
   const loadMorePosts = async () => {
     if (isLoading || !hasMore) return
@@ -118,8 +166,51 @@ export function InfinitePostList({ initialPosts, sortBy }: InfinitePostListProps
     setHasMore(initialPosts.length === POSTS_PER_PAGE)
   }, [sortBy])
 
+  const loadNewPosts = async () => {
+    setIsLoading(true)
+    const supabase = createClient()
+
+    try {
+      const { data, error } = await supabase
+        .from("posts")
+        .select(`
+          *,
+          profiles:author_id (username, display_name, avatar_url, reputation),
+          post_tags (
+            tags (name)
+          )
+        `)
+        .order("created_at", { ascending: false })
+        .limit(POSTS_PER_PAGE)
+
+      if (error) throw error
+
+      if (data) {
+        setPosts(data)
+        setNewPostsCount(0)
+        setPage(1)
+        setHasMore(data.length === POSTS_PER_PAGE)
+      }
+    } catch (error) {
+      console.error("Error loading new posts:", error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   return (
     <div className="space-y-4">
+      {/* Кнопка для загрузки новых постов */}
+      {newPostsCount > 0 && sortBy !== "recent" && (
+        <Button
+          onClick={loadNewPosts}
+          variant="outline"
+          className="w-full"
+        >
+          Загрузить {newPostsCount} {newPostsCount === 1 ? "новый пост" : "новых постов"}
+        </Button>
+      )}
+
       {posts.map((post) => (
         <PostCard key={post.id} post={post} />
       ))}
