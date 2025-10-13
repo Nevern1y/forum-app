@@ -72,7 +72,7 @@ export default async function PostPage({
   }
 
   // Increment view count (fire and forget с логированием ошибок)
-  supabase.rpc("increment_post_views", { post_id: id }).catch((error) => {
+  supabase.rpc("increment_post_views", { post_id: id }).then().catch((error) => {
     console.error("Failed to increment post views:", error)
   })
 
