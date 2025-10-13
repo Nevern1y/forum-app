@@ -71,43 +71,45 @@ export default async function PostPage({
     notFound()
   }
 
-  // Increment view count (не блокирующий - fire and forget)
-  supabase.rpc("increment_post_views", { post_id: id }).then()
+  // Increment view count (fire and forget с логированием ошибок)
+  supabase.rpc("increment_post_views", { post_id: id }).catch((error) => {
+    console.error("Failed to increment post views:", error)
+  })
 
   const profile = post.profiles
   const tags = post.post_tags.map((pt) => pt.tags?.name).filter(Boolean)
   const readingTime = calculateReadingTime(post.content)
 
   return (
-    <div className="container mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-8">
-      <Card className="dark:bg-[#181818]">
-        <CardHeader>
-          <div className="flex items-start gap-4">
-            <Link href={`/profile/${profile?.username}`}>
-              <Avatar className="h-12 w-12">
+    <div className="container mx-auto max-w-4xl px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8 mb-16 md:mb-0">
+      <Card className="dark:bg-[#181818] border-0 sm:border">
+        <CardHeader className="px-4 sm:px-6 py-4 sm:py-6">
+          <div className="flex items-start gap-3 sm:gap-4">
+            <Link href={`/profile/${profile?.username}`} className="shrink-0">
+              <Avatar className="h-10 w-10 sm:h-12 sm:w-12 ring-2 ring-border">
                 <AvatarImage src={profile?.avatar_url || undefined} />
-                <AvatarFallback>
+                <AvatarFallback className="text-sm sm:text-base">
                   {profile?.display_name?.[0]?.toUpperCase() || profile?.username[0].toUpperCase()}
                 </AvatarFallback>
               </Avatar>
             </Link>
-            <div className="flex-1 min-w-0 space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                  <Link href={`/profile/${profile?.username}`} className="font-medium hover:underline">
+            <div className="flex-1 min-w-0 space-y-2 sm:space-y-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
+                  <Link href={`/profile/${profile?.username}`} className="font-medium hover:underline truncate max-w-[120px] sm:max-w-none">
                     {profile?.display_name || profile?.username}
                   </Link>
-                <span>•</span>
-                <span>{profile?.reputation} репутации</span>
-                <span>•</span>
-                <span>
+                <span className="hidden sm:inline">•</span>
+                <span className="hidden sm:inline">{profile?.reputation} репутации</span>
+                <span className="hidden sm:inline">•</span>
+                <span className="text-[11px] sm:text-sm">
                   {formatDistanceToNow(new Date(post.created_at), {
                     addSuffix: true,
                     locale: ru,
                   })}
                 </span>
-                <span>•</span>
-                <span className="flex items-center gap-1">
+                <span className="hidden sm:inline">•</span>
+                <span className="hidden sm:flex items-center gap-1">
                     <Clock className="h-3 w-3" />
                     {formatReadingTime(readingTime)}
                   </span>
@@ -119,11 +121,11 @@ export default async function PostPage({
                   postTitle={post.title}
                 />
               </div>
-              <h1 className="text-2xl sm:text-3xl font-bold break-words">{post.title}</h1>
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold break-words leading-tight">{post.title}</h1>
               {tags.length > 0 && (
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5 sm:gap-2">
                   {tags.map((tag) => (
-                    <Badge key={tag} variant="secondary">
+                    <Badge key={tag} variant="secondary" className="text-xs sm:text-sm">
                       {tag}
                     </Badge>
                   ))}
@@ -132,7 +134,7 @@ export default async function PostPage({
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-4 sm:space-y-6 px-4 sm:px-6 pb-4 sm:pb-6">
           <MarkdownViewer content={post.content} />
 
           {/* Media Gallery - Full size */}
@@ -157,7 +159,7 @@ export default async function PostPage({
         </CardContent>
       </Card>
 
-      <div className="mt-8">
+      <div className="mt-6 sm:mt-8">
         <CommentSection postId={post.id} />
       </div>
     </div>

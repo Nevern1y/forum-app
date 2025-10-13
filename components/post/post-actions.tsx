@@ -246,28 +246,28 @@ export function PostActions({
   )?.[0]
 
   return (
-    <div className="space-y-3 border-t pt-4">
-      <div className="flex flex-wrap items-center gap-2 sm:gap-4">
-        <div className="flex items-center gap-2">
+    <div className="space-y-3 border-t pt-3 sm:pt-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <Button
           variant={userReaction === "like" ? "default" : "outline"}
           size="sm"
           onClick={() => handleReaction("like")}
           disabled={isLoading}
-          className={`transition-all ${userReaction === "like" ? "bg-primary text-primary-foreground" : ""}`}
+          className={`h-9 sm:h-10 min-w-[3.5rem] sm:min-w-[4rem] active:scale-95 transition-all ${userReaction === "like" ? "bg-primary text-primary-foreground" : ""}`}
         >
-          <ThumbsUp className="h-4 w-4 mr-1.5" />
-          <span className="font-medium">{localLikes}</span>
+          <ThumbsUp className="h-4 w-4 sm:h-[18px] sm:w-[18px] mr-1 sm:mr-1.5" />
+          <span className="font-medium text-sm sm:text-base">{localLikes}</span>
         </Button>
         <Button
           variant={userReaction === "dislike" ? "destructive" : "outline"}
           size="sm"
           onClick={() => handleReaction("dislike")}
           disabled={isLoading}
-          className={`transition-all ${userReaction === "dislike" ? "bg-destructive text-destructive-foreground" : ""}`}
+          className={`h-9 sm:h-10 min-w-[3.5rem] sm:min-w-[4rem] active:scale-95 transition-all ${userReaction === "dislike" ? "bg-destructive text-destructive-foreground" : ""}`}
         >
-          <ThumbsDown className="h-4 w-4 mr-1.5" />
-          <span className="font-medium">{localDislikes}</span>
+          <ThumbsDown className="h-4 w-4 sm:h-[18px] sm:w-[18px] mr-1 sm:mr-1.5" />
+          <span className="font-medium text-sm sm:text-base">{localDislikes}</span>
         </Button>
         </div>
 
@@ -276,13 +276,13 @@ export function PostActions({
           currentReaction={currentEmojiReaction}
         />
       
-        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-muted/50 text-sm text-muted-foreground">
-          <Eye className="h-4 w-4" />
+        <div className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-md bg-muted/50 text-xs sm:text-sm text-muted-foreground">
+          <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
           <span className="font-medium">{views.toLocaleString()}</span>
           <span className="hidden sm:inline">просмотров</span>
         </div>
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
           <SharePostButton postId={postId} postTitle={postTitle} />
           
           <Button
@@ -290,9 +290,9 @@ export function PostActions({
             size="sm"
             onClick={handleBookmark}
             disabled={isLoading}
-            className="gap-1.5 transition-all"
+            className="h-9 sm:h-10 gap-1 sm:gap-1.5 active:scale-95 transition-all"
           >
-            <Bookmark className="h-4 w-4" fill={isBookmarked ? "currentColor" : "none"} />
+            <Bookmark className="h-4 w-4 sm:h-[18px] sm:w-[18px]" fill={isBookmarked ? "currentColor" : "none"} />
             <span className="hidden sm:inline">{isBookmarked ? "Сохранено" : "Сохранить"}</span>
           </Button>
         </div>
