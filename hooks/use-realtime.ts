@@ -67,9 +67,27 @@ export function useRealtime<T = any>({
       }
     )
 
-    // Подписываемся
-    subscription.subscribe((status) => {
+    // Подписываемся с обработкой ошибок
+    subscription.subscribe((status, err) => {
       console.log(`[Realtime ${table}] Status:`, status)
+      
+      if (status === "SUBSCRIBED") {
+        console.log(`✅ [Realtime ${table}] Successfully subscribed`)
+      } else if (status === "CHANNEL_ERROR") {
+        console.error(`❌ [Realtime ${table}] Channel error:`, err)
+        console.error(`Check if realtime is enabled for ${table} in Supabase Dashboard`)
+      } else if (status === "TIMED_OUT") {
+        console.error(`⏱️ [Realtime ${table}] Connection timed out`)
+      } else if (status === "CLOSED") {
+        console.warn(`🔌 [Realtime ${table}] Connection closed`)
+        // Автоматическое переподключение через 5 секунд
+        if (channelRef.current) {
+          setTimeout(() => {
+            console.log(`🔄 [Realtime ${table}] Attempting to reconnect...`)
+            channelRef.current?.subscribe()
+          }, 5000)
+        }
+      }
     })
 
     channelRef.current = channel
