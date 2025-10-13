@@ -38,19 +38,27 @@ export async function PostList({ sortBy }: PostListProps) {
     )
   }
 
-  // Параллельно загружаем данные о лайках и комментариях для всех постов
+  // Параллельно загружаем данные о реакциях (лайки/дизлайки) и комментариях для всех постов
   const postIds = posts.map(p => p.id)
   
   const [
     { data: userReactions },
+    { data: allReactions },
     { data: commentCounts }
   ] = await Promise.all([
-    // Получаем лайки пользователя для всех постов одним запросом
+    // Получаем реакцию пользователя для всех постов одним запросом
     user ? supabase
       .from("post_reactions")
       .select("post_id, reaction_type")
       .eq("user_id", user.id)
-      .in("post_id", postIds) : Promise.resolve({ data: [] }),
+      .in("post_id", postIds)
+      .in("reaction_type", ["like", "dislike"]) : Promise.resolve({ data: [] }),
+    // Получаем все лайки/дизлайки для подсчёта
+    supabase
+      .from("post_reactions")
+      .select("post_id, reaction_type")
+      .in("post_id", postIds)
+      .in("reaction_type", ["like", "dislike"]),
     // Получаем количество комментариев для всех постов одним запросом
     supabase
       .from("comments")
@@ -65,15 +73,30 @@ export async function PostList({ sortBy }: PostListProps) {
       })
   ])
 
-  // Создаём словари для быстрого доступа
-  const reactionsMap = new Map(
-    userReactions?.map(r => [r.post_id, r.reaction_type === 'like']) || []
+  // Создаём словарь реакций пользователя (like/dislike/null)
+  const userReactionsMap = new Map(
+    userReactions?.map(r => [r.post_id, r.reaction_type]) || []
   )
+
+  // Подсчитываем лайки и дизлайки для каждого поста
+  const reactionsCount = allReactions?.reduce((acc, reaction) => {
+    if (!acc[reaction.post_id]) {
+      acc[reaction.post_id] = { likes: 0, dislikes: 0 }
+    }
+    if (reaction.reaction_type === 'like') {
+      acc[reaction.post_id].likes++
+    } else if (reaction.reaction_type === 'dislike') {
+      acc[reaction.post_id].dislikes++
+    }
+    return acc
+  }, {} as Record<string, { likes: number; dislikes: number }>) || {}
 
   // Добавляем данные к постам
   const postsWithUserData = posts.map(post => ({
     ...post,
-    user_has_liked: reactionsMap.get(post.id) || false,
+    user_reaction: userReactionsMap.get(post.id) || null,
+    likes: reactionsCount[post.id]?.likes || 0,
+    dislikes: reactionsCount[post.id]?.dislikes || 0,
     comment_count: commentCounts?.[post.id] || 0
   }))
 

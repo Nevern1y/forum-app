@@ -14,9 +14,9 @@ import { useRouter } from "next/navigation"
 import { X } from "lucide-react"
 import { toast } from "sonner"
 
-const MIN_TITLE_LENGTH = 10
+const MIN_TITLE_LENGTH = 1
 const MAX_TITLE_LENGTH = 200
-const MIN_CONTENT_LENGTH = 20
+const MIN_CONTENT_LENGTH = 0
 const MAX_CONTENT_LENGTH = 10000
 
 interface Post {
@@ -143,8 +143,8 @@ export function EditPostForm({ post, existingTags }: EditPostFormProps) {
               required
               className={titleError ? "border-destructive" : ""}
             />
-            {titleError && (
-              <p className="text-sm text-destructive">Минимальная длина заголовка: {MIN_TITLE_LENGTH} символов</p>
+            {titleError && title.length > 0 && (
+              <p className="text-sm text-destructive">Заголовок обязателен</p>
             )}
           </div>
 
@@ -158,8 +158,8 @@ export function EditPostForm({ post, existingTags }: EditPostFormProps) {
               error={contentError}
               maxLength={MAX_CONTENT_LENGTH}
             />
-            {contentError && (
-              <p className="text-sm text-destructive">Минимальная длина содержания: {MIN_CONTENT_LENGTH} символов</p>
+            {contentError && content.length > 0 && (
+              <p className="text-sm text-muted-foreground">Содержимое опционально (можно добавить только изображения или аудио)</p>
             )}
             <p className="text-xs text-muted-foreground">
               Совет: Используйте Markdown для форматирования текста
@@ -202,7 +202,7 @@ export function EditPostForm({ post, existingTags }: EditPostFormProps) {
           <div className="flex gap-4">
             <Button 
               type="submit" 
-              disabled={isLoading || titleError || contentError || title.length < MIN_TITLE_LENGTH || content.length < MIN_CONTENT_LENGTH}
+              disabled={isLoading || title.length < MIN_TITLE_LENGTH}
               className="min-w-[120px]"
             >
               {isLoading ? "Сохранение..." : "Сохранить изменения"}

@@ -68,64 +68,95 @@ export function PostActions({
   }
 
   const handleReaction = async (reactionType: "like" | "dislike") => {
+    if (isLoading) return
+    
     setIsLoading(true)
+    
+    // Сохраняем текущее состояние
+    const previousReaction = userReaction
+    const previousLikes = localLikes
+    const previousDislikes = localDislikes
+
+    // МГНОВЕННОЕ оптимистичное обновление UI
+    if (previousReaction === reactionType) {
+      // Убираем реакцию
+      setUserReaction(null)
+      if (reactionType === "like") {
+        setLocalLikes((prev) => Math.max(0, prev - 1))
+      } else {
+        setLocalDislikes((prev) => Math.max(0, prev - 1))
+      }
+    } else {
+      // Меняем или добавляем реакцию
+      if (previousReaction === "like") {
+        setLocalLikes((prev) => Math.max(0, prev - 1))
+        setLocalDislikes((prev) => prev + 1)
+      } else if (previousReaction === "dislike") {
+        setLocalDislikes((prev) => Math.max(0, prev - 1))
+        setLocalLikes((prev) => prev + 1)
+      } else {
+        // Новая реакция (не было реакции)
+        if (reactionType === "like") {
+          setLocalLikes((prev) => prev + 1)
+        } else {
+          setLocalDislikes((prev) => prev + 1)
+        }
+      }
+      setUserReaction(reactionType)
+    }
+
     const supabase = createClient()
 
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (!user) return
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (!user) {
+        // Откатываем изменения
+        setUserReaction(previousReaction)
+        setLocalLikes(previousLikes)
+        setLocalDislikes(previousDislikes)
+        toast.error('Войдите, чтобы реагировать на посты')
+        setIsLoading(false)
+        return
+      }
 
-      if (userReaction === reactionType) {
-        // Remove reaction
-        await supabase.from("post_reactions").delete().eq("post_id", postId).eq("user_id", user.id)
-
-        setUserReaction(null)
-        if (reactionType === "like") {
-          setLocalLikes((prev) => prev - 1)
-        } else {
-          setLocalDislikes((prev) => prev - 1)
-        }
+      if (previousReaction === reactionType) {
+        // Удаляем реакцию
+        await supabase
+          .from("post_reactions")
+          .delete()
+          .eq("post_id", postId)
+          .eq("user_id", user.id)
+          .eq("reaction_type", reactionType)
       } else {
-        // Add or update reaction
-        if (userReaction) {
-          // Update existing reaction
+        // Удаляем старую реакцию (если была) и добавляем новую
+        if (previousReaction) {
           await supabase
             .from("post_reactions")
-            .update({ reaction_type: reactionType })
+            .delete()
             .eq("post_id", postId)
             .eq("user_id", user.id)
-
-          // Adjust counts
-          if (userReaction === "like") {
-            setLocalLikes((prev) => prev - 1)
-            setLocalDislikes((prev) => prev + 1)
-          } else {
-            setLocalDislikes((prev) => prev - 1)
-            setLocalLikes((prev) => prev + 1)
-          }
-        } else {
-          // Insert new reaction
-          await supabase.from("post_reactions").insert({
+        }
+        
+        await supabase
+          .from("post_reactions")
+          .insert({
             post_id: postId,
             user_id: user.id,
             reaction_type: reactionType,
           })
-
-          if (reactionType === "like") {
-            setLocalLikes((prev) => prev + 1)
-          } else {
-            setLocalDislikes((prev) => prev + 1)
-          }
-        }
-        setUserReaction(reactionType)
       }
 
       router.refresh()
+      setIsLoading(false)
     } catch (error) {
-      console.error("[v0] Error handling reaction:", error)
-    } finally {
+      console.error("Error handling reaction:", error)
+      
+      // Откатываем изменения при ошибке
+      setUserReaction(previousReaction)
+      setLocalLikes(previousLikes)
+      setLocalDislikes(previousDislikes)
+      toast.error('Ошибка при обновлении реакции')
       setIsLoading(false)
     }
   }

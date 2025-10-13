@@ -31,14 +31,14 @@ export default async function FeedPage({
     .single()
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-muted/20 via-muted/10 to-background dark:bg-background">
-      <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/80">
-        <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-center">
-          <h1 className="text-xl font-bold tracking-tight">Для вас</h1>
+    <div className="min-h-screen bg-gradient-to-b from-muted/20 via-muted/10 to-background dark:bg-background pb-safe">
+      <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/80 pt-safe">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-center">
+          <h1 className="text-lg sm:text-xl font-bold tracking-tight">Для вас</h1>
         </div>
       </div>
 
-      <div className="max-w-3xl mx-auto px-4 py-6">
+      <div className="max-w-3xl mx-auto px-3 sm:px-4 py-4 sm:py-6 mb-16 md:mb-0">
         <div className="bg-card/80 dark:bg-[#181818] backdrop-blur-sm border border-border/50 rounded-2xl shadow-lg overflow-hidden">
           <QuickPostCreate 
             userAvatar={profile?.avatar_url}

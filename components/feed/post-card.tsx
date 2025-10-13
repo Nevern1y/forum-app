@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import Link from "next/link"
 import { formatDistanceToNow } from "date-fns"
 import { ru } from "date-fns/locale"
-import { MessageSquare, Eye, ThumbsUp, Pin, Share2 } from "lucide-react"
+import { MessageSquare, Eye, ThumbsUp, ThumbsDown, Pin, Share2 } from "lucide-react"
 import { MediaGallery } from "@/components/media/media-gallery"
 import { AudioPlayerCompact } from "@/components/media/audio-player-compact"
 import { SharePostButton } from "@/components/post/share-post-button"
@@ -20,12 +20,13 @@ interface PostCardProps {
     content: string
     views: number
     likes: number
+    dislikes: number
     created_at: string
     is_pinned?: boolean
     media_urls?: string[] | null
     audio_url?: string | null
     comment_count?: number
-    user_has_liked?: boolean
+    user_reaction?: string | null
     profiles: {
       username: string
       display_name: string | null
@@ -72,10 +73,10 @@ const PostCardComponent = ({ post }: PostCardProps) => {
   const profile = post.profiles
   const tags = post.post_tags.map((pt) => pt.tags?.name).filter(Boolean)
   
-  const [isLiked, setIsLiked] = useState(post.user_has_liked || false)
+  const [userReaction, setUserReaction] = useState<string | null>(post.user_reaction || null)
   const [likesCount, setLikesCount] = useState(post.likes)
-  const [isLiking, setIsLiking] = useState(false)
-  const [lastLikeTime, setLastLikeTime] = useState(0)
+  const [dislikesCount, setDislikesCount] = useState(post.dislikes)
+  const [isReacting, setIsReacting] = useState(false)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
   // Получаем ID текущего пользователя
@@ -91,25 +92,31 @@ const PostCardComponent = ({ post }: PostCardProps) => {
     postId: post.id,
     onNewReaction: (reaction) => {
       // Увеличиваем счетчик (мгновенно, без запроса к БД!)
-      setLikesCount(prev => prev + 1)
+      if (reaction.reaction_type === 'like') {
+        setLikesCount(prev => prev + 1)
+      } else if (reaction.reaction_type === 'dislike') {
+        setDislikesCount(prev => prev + 1)
+      }
       
-      // Если это наш лайк - обновляем статус
+      // Если это наша реакция - обновляем статус
       if (reaction.user_id === currentUserId) {
-        setIsLiked(true)
+        setUserReaction(reaction.reaction_type)
       }
     },
     onDeleteReaction: (reactionId) => {
-      // Уменьшаем счетчик (мгновенно!)
-      setLikesCount(prev => Math.max(0, prev - 1))
+      // Для удаления нужно знать, какой тип был удалён
+      // TODO: Передавать reaction_type в onDeleteReaction
+      // Пока просто рефетчим данные после удаления
     },
   })
 
-  // Синхронизируем состояние ТОЛЬКО при смене поста (не при каждом изменении likes!)
+  // Синхронизируем состояние ТОЛЬКО при смене поста (не при каждом изменении likes/dislikes!)
   // Это предотвращает рассинхронизацию между предпросмотром и полным постом
   useEffect(() => {
-    setIsLiked(post.user_has_liked || false)
+    setUserReaction(post.user_reaction || null)
     setLikesCount(post.likes || 0)
-  }, [post.id]) // Только при смене post.id, НЕ при изменении likes!
+    setDislikesCount(post.dislikes || 0)
+  }, [post.id]) // Только при смене post.id, НЕ при изменении счётчиков!
   
   // Display plain text (no markdown) content for preview
   const plainContent = post.content ? stripMarkdown(post.content) : ''
@@ -125,18 +132,11 @@ const PostCardComponent = ({ post }: PostCardProps) => {
     totalTextLength > 350 ? 'large' : 
     'medium'
 
-  const handleLike = async (e: React.MouseEvent) => {
+  const handleReaction = async (reactionType: 'like' | 'dislike', e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
     
-    // Rate limiting: max 1 action per 2 seconds
-    const now = Date.now()
-    if (now - lastLikeTime < 2000) {
-      toast.warning('Подождите немного перед следующим действием')
-      return
-    }
-    
-    if (isLiking) return
+    if (isReacting) return
 
     // Проверка на наличие post.id
     if (!post?.id) {
@@ -145,103 +145,103 @@ const PostCardComponent = ({ post }: PostCardProps) => {
       return
     }
     
-    setIsLiking(true)
-    setLastLikeTime(now)
+    setIsReacting(true)
     
-    // Optimistic update - обновляем только isLiked, счётчик обновится через realtime!
-    const newIsLiked = !isLiked
-    const previousIsLiked = isLiked
-    setIsLiked(newIsLiked)
+    // Сохраняем текущее состояние ДО изменений
+    const previousReaction = userReaction
+    const previousLikes = likesCount
+    const previousDislikes = dislikesCount
     
-    try {
-      const supabase = createClient()
-      const { data: { user }, error: authError } = await supabase.auth.getUser()
-      
-      if (authError) {
-        console.error('Auth error:', authError)
-        setIsLiked(previousIsLiked) // Revert
-        toast.error('Ошибка авторизации')
-        return
+    // МГНОВЕННОЕ оптимистичное обновление UI (без задержек!)
+    if (previousReaction === reactionType) {
+      // Убираем реакцию
+      setUserReaction(null)
+      if (reactionType === 'like') {
+        setLikesCount(prev => Math.max(0, prev - 1))
+      } else {
+        setDislikesCount(prev => Math.max(0, prev - 1))
+      }
+    } else {
+      // Меняем или добавляем реакцию
+      if (previousReaction === 'like') {
+        setLikesCount(prev => Math.max(0, prev - 1))
+      } else if (previousReaction === 'dislike') {
+        setDislikesCount(prev => Math.max(0, prev - 1))
       }
       
-      if (!user) {
-        console.warn('User not authenticated')
-        setIsLiked(previousIsLiked) // Revert
-        toast.error('Войдите, чтобы лайкать посты')
+      setUserReaction(reactionType)
+      if (reactionType === 'like') {
+        setLikesCount(prev => prev + 1)
+      } else {
+        setDislikesCount(prev => prev + 1)
+      }
+    }
+    
+    // Запускаем запрос к серверу в фоне (UI уже обновился!)
+    const supabase = createClient()
+    
+    try {
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      
+      if (authError || !user) {
+        // Откатываем изменения
+        setUserReaction(previousReaction)
+        setLikesCount(previousLikes)
+        setDislikesCount(previousDislikes)
+        toast.error('Войдите, чтобы реагировать на посты')
+        setIsReacting(false)
         return
       }
 
-      if (newIsLiked) {
-        // First, try to delete any existing reaction (in case of old constraint)
-        await supabase
+      // Определяем действие по ПРЕДЫДУЩЕМУ состоянию
+      if (previousReaction === reactionType) {
+        // Удаляем реакцию
+        const { error } = await supabase
           .from('post_reactions')
           .delete()
           .eq('post_id', post.id)
           .eq('user_id', user.id)
+          .eq('reaction_type', reactionType)
         
-        // Then insert the new like
-        const { data, error } = await supabase
+        if (error) throw error
+      } else {
+        // Удаляем старую реакцию (если была) и добавляем новую
+        if (previousReaction) {
+          await supabase
+            .from('post_reactions')
+            .delete()
+            .eq('post_id', post.id)
+            .eq('user_id', user.id)
+        }
+        
+        const { error } = await supabase
           .from('post_reactions')
           .insert({ 
             post_id: post.id, 
             user_id: user.id,
-            reaction_type: 'like'
+            reaction_type: reactionType
           })
-          .select()
         
-        if (error) {
-          console.error('Insert error details:', {
-            message: error.message,
-            details: error.details,
-            hint: error.hint,
-            code: error.code
-          })
-          setIsLiked(previousIsLiked) // Revert
-          toast.error('Ошибка при добавлении лайка')
-          return
-        }
-        console.log('Like added:', data)
-      } else {
-        const { data, error } = await supabase
-          .from('post_reactions')
-          .delete()
-          .eq('post_id', post.id)
-          .eq('user_id', user.id)
-          .eq('reaction_type', 'like')
-          .select()
-        
-        if (error) {
-          console.error('Delete error details:', {
-            message: error.message,
-            details: error.details,
-            hint: error.hint,
-            code: error.code
-          })
-          setIsLiked(previousIsLiked) // Revert
-          toast.error('Ошибка при удалении лайка')
-          return
-        }
-        console.log('Like removed:', data)
+        if (error) throw error
       }
+      
+      // Успех - оставляем оптимистичное обновление как есть
+      setIsReacting(false)
     } catch (error: any) {
-      console.error('Error toggling like:', {
-        error,
-        message: error?.message,
-        details: error?.details,
-        hint: error?.hint,
-        code: error?.code
-      })
-      // Revert on error
-      setIsLiked(previousIsLiked)
-      toast.error('Ошибка при обновлении лайка')
-    } finally {
-      setIsLiking(false)
+      console.error('Error handling reaction:', error)
+      
+      // Откатываем изменения только при ошибке
+      setUserReaction(previousReaction)
+      setLikesCount(previousLikes)
+      setDislikesCount(previousDislikes)
+      toast.error('Ошибка при обновлении реакции')
+      setIsReacting(false)
     }
   }
 
   return (
     <article className={`threads-post group relative ${post.is_pinned ? "bg-primary/5" : ""}`}>
-      <div className="flex gap-3 px-5 py-4">
+      <div className="flex gap-3 px-4 sm:px-5 py-4 sm:py-5">
         <Link href={`/profile/${profile?.username}`} className="shrink-0 pt-0.5">
           <Avatar className="h-9 w-9 ring-1 ring-border">
             <AvatarImage src={profile?.avatar_url || undefined} />
@@ -274,11 +274,11 @@ const PostCardComponent = ({ post }: PostCardProps) => {
           </div>
 
           <Link href={`/post/${post.id}`} className="block space-y-2 group/link">
-            <h2 className="text-[15px] font-normal text-foreground break-words leading-normal">
+            <h2 className="text-base sm:text-[15px] font-normal text-foreground break-words leading-normal">
               {post.title}
             </h2>
             {displayContent && (
-              <p className="text-[15px] text-muted-foreground/80 break-words leading-snug whitespace-pre-wrap">
+              <p className="text-base sm:text-[15px] text-muted-foreground/80 break-words leading-snug whitespace-pre-wrap">
                 {displayContent}
               </p>
             )}
@@ -328,36 +328,57 @@ const PostCardComponent = ({ post }: PostCardProps) => {
             </div>
           )}
 
-          <div className="flex items-center gap-5 pt-2">
+          <div className="flex items-center gap-3 sm:gap-5 pt-3">
             <button 
-              onClick={handleLike}
-              disabled={isLiking}
-              className={`group/like flex items-center gap-1.5 transition-all duration-200 ${
-                isLiked 
-                  ? 'text-red-500' 
-                  : 'text-muted-foreground/60 hover:text-red-500'
+              onClick={(e) => handleReaction('like', e)}
+              disabled={isReacting}
+              className={`group/like flex items-center gap-1.5 sm:gap-2 transition-all duration-200 active:scale-95 p-1 -m-1 rounded-lg ${
+                userReaction === 'like'
+                  ? 'text-green-500' 
+                  : 'text-muted-foreground/60 hover:text-green-500 active:bg-green-500/10'
               }`}
-              aria-label={isLiked ? "Убрать лайк" : "Лайкнуть"}
+              aria-label={userReaction === 'like' ? "Убрать лайк" : "Лайкнуть"}
             >
-              <ThumbsUp className={`h-[18px] w-[18px] transition-all ${
-                isLiked 
-                  ? 'fill-red-500' 
-                  : 'group-hover/like:fill-red-500'
+              <ThumbsUp className={`h-5 w-5 sm:h-[18px] sm:w-[18px] transition-all ${
+                userReaction === 'like'
+                  ? 'fill-green-500' 
+                  : 'group-hover/like:fill-green-500'
               }`} />
-              <span className="text-sm tabular-nums font-medium">{likesCount}</span>
+              <span className="text-sm sm:text-sm tabular-nums font-medium">{likesCount}</span>
+            </button>
+
+            <button 
+              onClick={(e) => handleReaction('dislike', e)}
+              disabled={isReacting}
+              className={`group/dislike flex items-center gap-1.5 sm:gap-2 transition-all duration-200 active:scale-95 p-1 -m-1 rounded-lg ${
+                userReaction === 'dislike'
+                  ? 'text-red-500' 
+                  : 'text-muted-foreground/60 hover:text-red-500 active:bg-red-500/10'
+              }`}
+              aria-label={userReaction === 'dislike' ? "Убрать дизлайк" : "Дизлайкнуть"}
+            >
+              <ThumbsDown className={`h-5 w-5 sm:h-[18px] sm:w-[18px] transition-all ${
+                userReaction === 'dislike'
+                  ? 'fill-red-500' 
+                  : 'group-hover/dislike:fill-red-500'
+              }`} />
+              <span className="text-sm sm:text-sm tabular-nums font-medium">{dislikesCount}</span>
             </button>
             
-            <div className="flex items-center gap-1.5 text-muted-foreground/60 pointer-events-none">
-              <MessageSquare className="h-[18px] w-[18px]" />
-              <span className="text-sm tabular-nums font-medium">{post.comment_count || 0}</span>
-            </div>
+            <Link
+              href={`/post/${post.id}#comments`}
+              className="flex items-center gap-1.5 sm:gap-2 text-muted-foreground/60 hover:text-primary transition-colors p-1 -m-1 rounded-lg active:scale-95 active:bg-accent/50"
+            >
+              <MessageSquare className="h-5 w-5 sm:h-[18px] sm:w-[18px]" />
+              <span className="text-sm sm:text-sm tabular-nums font-medium">{post.comment_count || 0}</span>
+            </Link>
             
-            <div className="flex items-center gap-1.5 text-sm text-muted-foreground/50">
-              <Eye className="h-[18px] w-[18px]" />
-              <span className="tabular-nums font-medium">{post.views}</span>
+            <div className="flex items-center gap-1.5 sm:gap-2 text-sm text-muted-foreground/50 ml-auto sm:ml-0">
+              <Eye className="h-5 w-5 sm:h-[18px] sm:w-[18px]" />
+              <span className="tabular-nums font-medium text-sm sm:text-sm">{post.views}</span>
             </div>
 
-            <div onClick={(e) => e.stopPropagation()}>
+            <div onClick={(e) => e.stopPropagation()} className="hidden sm:block">
               <SharePostButton postId={post.id} postTitle={post.title} />
             </div>
           </div>
@@ -372,6 +393,7 @@ export const PostCard = memo(PostCardComponent, (prevProps, nextProps) => {
   // Перерендерить только если изменился сам пост
   return prevProps.post.id === nextProps.post.id &&
          prevProps.post.likes === nextProps.post.likes &&
+         prevProps.post.dislikes === nextProps.post.dislikes &&
          prevProps.post.comment_count === nextProps.post.comment_count &&
-         prevProps.post.user_has_liked === nextProps.post.user_has_liked
+         prevProps.post.user_reaction === nextProps.post.user_reaction
 })

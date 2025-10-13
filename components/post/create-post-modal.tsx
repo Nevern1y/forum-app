@@ -14,9 +14,9 @@ import { toast } from "sonner"
 import { ImageUploader } from "@/components/media/image-uploader"
 import { VoiceRecorder } from "@/components/media/voice-recorder"
 
-const MIN_TITLE_LENGTH = 10
+const MIN_TITLE_LENGTH = 1
 const MAX_TITLE_LENGTH = 200
-const MIN_CONTENT_LENGTH = 20
+const MIN_CONTENT_LENGTH = 0
 const MAX_CONTENT_LENGTH = 10000
 
 interface CreatePostModalProps {
@@ -60,12 +60,7 @@ export function CreatePostModal({ open, onOpenChange }: CreatePostModalProps) {
     e.preventDefault()
     
     if (title.length < MIN_TITLE_LENGTH) {
-      toast.error(`Заголовок должен содержать минимум ${MIN_TITLE_LENGTH} символов`)
-      return
-    }
-
-    if (content.length < MIN_CONTENT_LENGTH) {
-      toast.error(`Содержимое должно содержать минимум ${MIN_CONTENT_LENGTH} символов`)
+      toast.error('Заголовок обязателен')
       return
     }
 
@@ -206,8 +201,8 @@ export function CreatePostModal({ open, onOpenChange }: CreatePostModalProps) {
               className={titleError ? "border-destructive" : ""}
             />
             <div className="flex items-center justify-between text-xs">
-              {titleError && (
-                <p className="text-destructive">Минимум {MIN_TITLE_LENGTH} символов</p>
+              {titleError && title.length === 0 && (
+                <p className="text-destructive">Заголовок обязателен</p>
               )}
               <p className={`ml-auto ${title.length > MAX_TITLE_LENGTH * 0.9 ? "text-destructive" : "text-muted-foreground"}`}>
                 {title.length}/{MAX_TITLE_LENGTH}
@@ -217,7 +212,7 @@ export function CreatePostModal({ open, onOpenChange }: CreatePostModalProps) {
 
           <div className="space-y-2">
             <Label htmlFor="content">
-              Содержимое <span className="text-destructive">*</span>
+              Содержимое (опционально)
             </Label>
             <MarkdownEditor
               value={content}
@@ -226,9 +221,9 @@ export function CreatePostModal({ open, onOpenChange }: CreatePostModalProps) {
               className={contentError ? "border-destructive" : ""}
             />
             <div className="flex items-center justify-between text-xs">
-              {contentError && (
-                <p className="text-destructive">Минимум {MIN_CONTENT_LENGTH} символов</p>
-              )}
+              <p className="text-muted-foreground text-xs">
+                Содержимое опционально - можно добавить только фото или аудио
+              </p>
               <p className={`ml-auto ${content.length > MAX_CONTENT_LENGTH * 0.9 ? "text-destructive" : "text-muted-foreground"}`}>
                 {content.length}/{MAX_CONTENT_LENGTH}
               </p>
@@ -288,7 +283,7 @@ export function CreatePostModal({ open, onOpenChange }: CreatePostModalProps) {
             </button>
             <button
               type="submit"
-              disabled={isLoading || titleError || contentError || !title || !content}
+              disabled={isLoading || !title}
               className="flex-1 px-5 py-3 text-sm font-semibold rounded-full bg-gradient-to-r from-primary via-primary to-primary/90 text-primary-foreground hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center relative overflow-hidden group"
             >
               <span className="relative z-10 flex items-center">
