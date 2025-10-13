@@ -99,6 +99,8 @@ export function ChatWindow({ currentUserId, otherUser, embedded = false, onClose
 
     const supabase = createClient()
 
+    console.log("🔌 Subscribing to conversation:", conversationId)
+
     const channel = supabase
       .channel(`conversation:${conversationId}`)
       .on(
@@ -110,10 +112,11 @@ export function ChatWindow({ currentUserId, otherUser, embedded = false, onClose
           filter: `conversation_id=eq.${conversationId}`,
         },
         async (payload) => {
+          console.log("📨 New message received via realtime:", payload)
           const newMessage = payload.new as any
 
           // Загружаем полные данные сообщения с профилем отправителя
-          const { data: fullMessage } = await supabase
+          const { data: fullMessage, error } = await supabase
             .from("direct_messages")
             .select(`
               *,
@@ -128,7 +131,13 @@ export function ChatWindow({ currentUserId, otherUser, embedded = false, onClose
             .eq("id", newMessage.id)
             .single()
 
+          if (error) {
+            console.error("❌ Error loading full message:", error)
+            return
+          }
+
           if (fullMessage) {
+            console.log("✅ Adding message to list:", fullMessage)
             // Добавляем новое сообщение БЕЗ перезагрузки всех
             setMessages(prev => [...prev, fullMessage])
 
@@ -175,9 +184,21 @@ export function ChatWindow({ currentUserId, otherUser, embedded = false, onClose
           setMessages(prev => prev.filter(msg => msg.id !== deletedMessage.id))
         }
       )
-      .subscribe()
+      .subscribe((status) => {
+        console.log("🔔 Subscription status:", status)
+        if (status === "SUBSCRIBED") {
+          console.log("✅ Successfully subscribed to realtime updates")
+        } else if (status === "CHANNEL_ERROR") {
+          console.error("❌ Channel error - realtime not working")
+        } else if (status === "TIMED_OUT") {
+          console.error("⏱️ Subscription timed out")
+        } else if (status === "CLOSED") {
+          console.log("🔌 Channel closed")
+        }
+      })
 
     return () => {
+      console.log("🔌 Unsubscribing from conversation:", conversationId)
       supabase.removeChannel(channel)
     }
   }, [conversationId, currentUserId])

@@ -36,6 +36,17 @@ export function PostActions({
   const [emojiReactions, setEmojiReactions] = useState<Record<string, { count: number; userReacted: boolean }>>({})
   const router = useRouter()
 
+  // Синхронизация с пропсами при обновлении с сервера
+  useEffect(() => {
+    setLocalLikes(likes)
+    setLocalDislikes(dislikes)
+    setUserReaction(initialReaction)
+  }, [likes, dislikes, initialReaction])
+
+  useEffect(() => {
+    setIsBookmarked(initialBookmarked)
+  }, [initialBookmarked])
+
   useEffect(() => {
     loadEmojiReactions()
   }, [postId])
