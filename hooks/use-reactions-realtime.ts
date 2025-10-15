@@ -7,6 +7,7 @@ interface Reaction {
   post_id: string
   user_id: string
   reaction_type: string
+  emoji?: string | null
   created_at: string
 }
 
