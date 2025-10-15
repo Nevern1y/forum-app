@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
-import { Loader2, CheckCheck, Trash2 } from "lucide-react"
+import { Loader2, CheckCheck, Trash2, Bell, BellOff, Sparkles } from "lucide-react"
 import { toast } from "sonner"
 import Link from "next/link"
 import {
@@ -102,26 +102,35 @@ export function NotificationList({ userId, onNotificationsRead, onClose }: Notif
     )
   }
 
+  const unreadCount = notifications.filter(n => !n.is_read).length
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="p-4 space-y-3">
+      <div className="p-4 pb-3 space-y-2">
         <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-lg">Уведомления</h3>
-          {notifications.some((n) => !n.is_read) && (
+          <div className="flex items-center gap-2">
+            <h3 className="font-semibold text-lg">Уведомления</h3>
+            {unreadCount > 0 && (
+              <span className="px-2 py-0.5 text-xs font-medium bg-primary text-primary-foreground rounded-full animate-pulse">
+                {unreadCount}
+              </span>
+            )}
+          </div>
+          {unreadCount > 0 && (
             <Button
               variant="ghost"
               size="sm"
               onClick={handleMarkAllAsRead}
               disabled={actionLoading === "all"}
-              className="text-xs"
+              className="text-xs h-8 hover:bg-primary/10"
             >
               {actionLoading === "all" ? (
-                <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
               ) : (
-                <CheckCheck className="h-3 w-3 mr-1" />
+                <CheckCheck className="h-3.5 w-3.5 mr-1.5" />
               )}
-              Прочитать все
+              Прочитать
             </Button>
           )}
         </div>
@@ -132,9 +141,17 @@ export function NotificationList({ userId, onNotificationsRead, onClose }: Notif
       {/* Notifications List */}
       <ScrollArea className="flex-1 max-h-[500px]">
         {notifications.length === 0 ? (
-          <div className="flex flex-col items-center justify-center p-8 text-center">
-            <Bell className="h-12 w-12 text-muted-foreground/50 mb-3" />
-            <p className="text-sm text-muted-foreground">Нет уведомлений</p>
+          <div className="flex flex-col items-center justify-center p-12 py-16 text-center">
+            <div className="relative mb-4">
+              <div className="absolute inset-0 bg-primary/10 blur-2xl rounded-full" />
+              <div className="relative w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                <BellOff className="h-10 w-10 text-muted-foreground/50" />
+              </div>
+            </div>
+            <h4 className="font-semibold text-base mb-1">Всё спокойно</h4>
+            <p className="text-sm text-muted-foreground max-w-[250px]">
+              У вас пока нет новых уведомлений
+            </p>
           </div>
         ) : (
           <div className="divide-y">
@@ -145,8 +162,8 @@ export function NotificationList({ userId, onNotificationsRead, onClose }: Notif
                 <div
                   key={notification.id}
                   className={cn(
-                    "p-4 hover:bg-accent/50 transition-colors relative group",
-                    !notification.is_read && "bg-primary/5"
+                    "p-3.5 hover:bg-accent/50 transition-all duration-200 relative group cursor-pointer",
+                    !notification.is_read && "bg-primary/5 hover:bg-primary/10"
                   )}
                 >
                   {notification.link ? (
@@ -173,20 +190,24 @@ export function NotificationList({ userId, onNotificationsRead, onClose }: Notif
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => handleDelete(notification.id)}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      handleDelete(notification.id)
+                    }}
                     disabled={actionLoading === notification.id}
-                    className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-all hover:bg-destructive/10 hover:text-destructive"
                   >
                     {actionLoading === notification.id ? (
-                      <Loader2 className="h-3 w-3 animate-spin" />
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
                     ) : (
-                      <Trash2 className="h-3 w-3" />
+                      <Trash2 className="h-3.5 w-3.5" />
                     )}
                   </Button>
 
                   {/* Unread Indicator */}
                   {!notification.is_read && (
-                    <div className="absolute left-2 top-1/2 -translate-y-1/2 w-2 h-2 bg-primary rounded-full" />
+                    <div className="absolute left-2 top-1/2 -translate-y-1/2 w-2 h-2 bg-primary rounded-full animate-pulse shadow-lg shadow-primary/50" />
                   )}
                 </div>
               )
@@ -202,20 +223,21 @@ function NotificationContent({ notification, relatedUser }: any) {
   return (
     <div className="flex gap-3">
       {relatedUser && (
-        <Avatar className="h-10 w-10 shrink-0">
+        <Avatar className="h-10 w-10 shrink-0 ring-2 ring-background">
           <AvatarImage src={relatedUser.avatar_url || undefined} />
-          <AvatarFallback className="text-sm">
+          <AvatarFallback className="text-sm font-medium bg-gradient-to-br from-primary/20 to-primary/10">
             {relatedUser.display_name?.[0]?.toUpperCase() || relatedUser.username[0].toUpperCase()}
           </AvatarFallback>
         </Avatar>
       )}
 
-      <div className="flex-1 min-w-0 space-y-1">
-        <p className="text-sm font-medium line-clamp-2">{notification.title}</p>
+      <div className="flex-1 min-w-0 space-y-1 pr-8">
+        <p className="text-sm font-medium line-clamp-2 leading-snug">{notification.title}</p>
         {notification.message && (
-          <p className="text-xs text-muted-foreground line-clamp-2">{notification.message}</p>
+          <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{notification.message}</p>
         )}
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-muted-foreground/70 flex items-center gap-1">
+          <span className="inline-block w-1 h-1 rounded-full bg-muted-foreground/50" />
           {formatDistanceToNow(new Date(notification.created_at), {
             addSuffix: true,
             locale: ru,
