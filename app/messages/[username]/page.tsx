@@ -3,19 +3,21 @@ import { redirect, notFound } from "next/navigation"
 import { ChatWindow } from "@/components/messages/chat-window"
 
 interface ChatPageProps {
-  params: {
+  params: Promise<{
     username: string
-  }
+  }>
 }
 
 export async function generateMetadata({ params }: ChatPageProps) {
+  const { username } = await params
   return {
-    title: `Чат с ${params.username}`,
+    title: `Чат с ${username}`,
     description: "Личные сообщения",
   }
 }
 
 export default async function ChatPage({ params }: ChatPageProps) {
+  const { username } = await params
   const supabase = await createClient()
 
   const {
@@ -30,7 +32,7 @@ export default async function ChatPage({ params }: ChatPageProps) {
   const { data: otherUserProfile, error } = await supabase
     .from("profiles")
     .select("*")
-    .eq("username", params.username)
+    .eq("username", username)
     .single()
 
   if (error || !otherUserProfile) {
