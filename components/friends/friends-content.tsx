@@ -153,6 +153,10 @@ export function FriendsContent({ userId }: FriendsContentProps) {
         ) : (
           friends.map((friendship) => {
             const friend = friendship.friend
+            if (!friend) {
+              console.error("Friend data is missing for friendship:", friendship)
+              return null
+            }
             return (
               <Card
                 key={friendship.id}
@@ -188,9 +192,15 @@ export function FriendsContent({ userId }: FriendsContentProps) {
                   </div>
 
                   <div className="flex gap-2">
-                    <Button size="sm" variant="outline" asChild>
-                      <Link href={`/messages/${friend.username}`}>Написать</Link>
-                    </Button>
+                    {friend?.username ? (
+                      <Button size="sm" variant="outline" asChild>
+                        <Link href={`/messages/${friend.username}`}>Написать</Link>
+                      </Button>
+                    ) : (
+                      <Button size="sm" variant="outline" disabled>
+                        Написать
+                      </Button>
+                    )}
                     <Button
                       size="sm"
                       variant="ghost"
