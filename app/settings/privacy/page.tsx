@@ -20,11 +20,11 @@ export default async function PrivacySettingsPage() {
     .single()
 
   return (
-    <div className="container mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-8">
-      <div className="space-y-6">
+    <div className="container mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-6 md:py-8">
+      <div className="space-y-4 md:space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">Приватность и безопасность</h1>
-          <p className="text-muted-foreground">Управляйте тем, кто может видеть вашу информацию</p>
+          <h1 className="text-2xl md:text-3xl font-bold">Приватность и безопасность</h1>
+          <p className="text-sm md:text-base text-muted-foreground">Управляйте тем, кто может видеть вашу информацию</p>
         </div>
         <PrivacySettings userId={user.id} initialSettings={profile || undefined} />
       </div>

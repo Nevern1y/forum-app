@@ -158,22 +158,22 @@ export function WhatsAppStyleMessages({ userId, currentUser }: WhatsAppStyleMess
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-[600px]">
+      <div className="flex items-center justify-center h-[400px] md:h-[600px]">
         <Loader2 className="h-8 w-8 animate-spin text-gray-500 dark:text-gray-400" />
       </div>
     )
   }
 
   return (
-    <div className="flex h-[calc(100vh-180px)] bg-background dark:bg-[#181818] rounded-xl overflow-hidden border border-border dark:border-[#252525] shadow-sm">
+    <div className="flex h-[calc(100vh-160px)] md:h-[calc(100vh-180px)] bg-background dark:bg-[#181818] rounded-xl overflow-hidden border border-border dark:border-[#252525] shadow-sm">
       {/* Sidebar - список чатов */}
       <div className={cn(
         "w-full md:w-80 border-r border-border dark:border-[#252525] flex flex-col bg-card dark:bg-[#1a1a1a]",
         selectedChat && "hidden md:flex"
       )}>
         {/* Header */}
-        <div className="p-4 border-b border-border dark:border-[#252525] bg-card dark:bg-[#1a1a1a]">
-          <h2 className="text-xl font-semibold mb-3 text-foreground dark:text-white">Сообщения</h2>
+        <div className="p-3 md:p-4 border-b border-border dark:border-[#252525] bg-card dark:bg-[#1a1a1a]">
+          <h2 className="text-lg md:text-xl font-semibold mb-2 md:mb-3 text-foreground dark:text-white">Сообщения</h2>
           
           {/* Search */}
           <div className="relative">
@@ -209,7 +209,7 @@ export function WhatsAppStyleMessages({ userId, currentUser }: WhatsAppStyleMess
                 key={`${chat.type}-${chat.id}`}
                 onClick={() => setSelectedChat(chat)}
                 className={cn(
-                  "w-full p-3 flex items-center gap-3 hover:bg-muted dark:hover:bg-[#202020] transition-colors border-b border-border dark:border-[#252525]",
+                  "w-full p-2.5 md:p-3 flex items-center gap-2.5 md:gap-3 hover:bg-muted dark:hover:bg-[#202020] transition-colors border-b border-border dark:border-[#252525]",
                   selectedChat?.user?.id === chat.user?.id && "bg-muted/50 dark:bg-[#222222]"
                 )}
               >

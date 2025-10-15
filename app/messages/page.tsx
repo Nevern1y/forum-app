@@ -30,7 +30,7 @@ export default async function MessagesPage() {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-[calc(100vh-80px)] px-4 py-6">
+    <div className="flex items-center justify-center min-h-[calc(100vh-144px)] md:min-h-[calc(100vh-80px)] px-4 py-4 md:py-6">
       <div className="w-full max-w-6xl">
         <WhatsAppStyleMessages
           userId={user.id}

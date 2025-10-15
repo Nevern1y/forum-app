@@ -182,7 +182,7 @@ export function CreatePostForm() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Создайте новый пост</CardTitle>
+              <CardTitle className="text-lg md:text-xl">Создайте новый пост</CardTitle>
               {lastSaved && (
                 <span className="text-sm text-muted-foreground">
                   Сохранено {lastSaved.toLocaleTimeString()}
@@ -191,7 +191,7 @@ export function CreatePostForm() {
             </div>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label htmlFor="title">Заголовок *</Label>
@@ -282,15 +282,15 @@ export function CreatePostForm() {
             </div>
           )}
 
-          <div className="flex gap-4">
+          <div className="flex flex-col sm:flex-row gap-3">
             <Button 
               type="submit" 
               disabled={isLoading || title.length < MIN_TITLE_LENGTH}
-              className="min-w-[120px]"
+              className="w-full sm:w-auto sm:min-w-[120px]"
             >
               {isLoading ? "Публикация..." : "Опубликовать"}
             </Button>
-            <Button type="button" variant="outline" onClick={() => router.push("/feed")} disabled={isLoading}>
+            <Button type="button" variant="outline" onClick={() => router.push("/feed")} disabled={isLoading} className="w-full sm:w-auto">
               Отмена
             </Button>
           </div>

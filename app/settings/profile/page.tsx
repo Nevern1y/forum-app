@@ -19,11 +19,11 @@ export default async function ProfileSettingsPage() {
   }
 
   return (
-    <div className="container mx-auto max-w-2xl px-4 sm:px-6 lg:px-8 py-8">
-      <div className="space-y-6">
+    <div className="container mx-auto max-w-2xl px-4 sm:px-6 lg:px-8 py-6 md:py-8">
+      <div className="space-y-4 md:space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">Настройки профиля</h1>
-          <p className="text-muted-foreground">Управляйте информацией вашего профиля</p>
+          <h1 className="text-2xl md:text-3xl font-bold">Настройки профиля</h1>
+          <p className="text-sm md:text-base text-muted-foreground">Управляйте информацией вашего профиля</p>
         </div>
         <ProfileEditForm profile={profile} />
       </div>

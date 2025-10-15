@@ -243,7 +243,7 @@ const PostCardComponent = ({ post }: PostCardProps) => {
     <article className={`threads-post group relative ${post.is_pinned ? "bg-primary/5" : ""}`}>
       <div className="flex gap-3 px-4 sm:px-5 py-4 sm:py-5">
         <Link href={`/profile/${profile?.username}`} className="shrink-0 pt-0.5">
-          <Avatar className="h-9 w-9 ring-1 ring-border">
+          <Avatar className="h-11 w-11 sm:h-9 sm:w-9 ring-1 ring-border">
             <AvatarImage src={profile?.avatar_url || undefined} />
             <AvatarFallback className="bg-muted text-foreground text-sm font-medium">
               {profile?.display_name?.[0]?.toUpperCase() || profile?.username[0].toUpperCase()}

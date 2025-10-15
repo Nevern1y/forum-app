@@ -26,7 +26,24 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Форум - Современная платформа для общения",
   description: "Обменивайтесь идеями и создавайте сообщество",
-    generator: 'v0.app'
+  generator: 'v0.app',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Форум',
+  },
+}
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+  viewportFit: 'cover',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#1f1f1f' }
+  ],
 }
 
 export default async function RootLayout({

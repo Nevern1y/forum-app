@@ -19,11 +19,11 @@ export default async function FriendsPage() {
   }
 
   return (
-    <div className="container max-w-4xl mx-auto py-8 px-4">
+    <div className="container max-w-4xl mx-auto py-6 md:py-8 px-4">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Друзья</h1>
-        <p className="text-muted-foreground">
+      <div className="mb-6 md:mb-8">
+        <h1 className="text-2xl md:text-3xl font-bold mb-2">Друзья</h1>
+        <p className="text-sm md:text-base text-muted-foreground">
           Управляйте друзьями и запросами в друзья
         </p>
       </div>

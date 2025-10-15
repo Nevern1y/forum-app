@@ -3,11 +3,11 @@ import { ThemeToggle } from "@/components/theme-toggle"
 
 export default function AppearancePage() {
   return (
-    <div className="container mx-auto max-w-4xl px-4 py-8">
-      <div className="space-y-6">
+    <div className="container mx-auto max-w-4xl px-4 py-6 md:py-8">
+      <div className="space-y-4 md:space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">Внешний вид</h1>
-          <p className="text-muted-foreground mt-2">
+          <h1 className="text-2xl md:text-3xl font-bold">Внешний вид</h1>
+          <p className="text-sm md:text-base text-muted-foreground mt-2">
             Настройте внешний вид приложения под ваши предпочтения
           </p>
         </div>

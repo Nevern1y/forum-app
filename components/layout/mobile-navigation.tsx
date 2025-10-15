@@ -55,7 +55,7 @@ export function MobileNavigation({ username }: MobileNavigationProps) {
                   : "text-muted-foreground active:bg-accent/50"
               )}
             >
-              <item.icon className="h-6 w-6 sm:h-7 sm:w-7" strokeWidth={isActive ? 2.5 : 2} />
+              <item.icon className="h-7 w-7" strokeWidth={isActive ? 2.5 : 2} />
               <span className="text-[10px] sm:text-xs font-medium">{item.label}</span>
             </Link>
           )
@@ -68,11 +68,11 @@ export function MobileNavigation({ username }: MobileNavigationProps) {
             >
               {mounted ? (
                 <>
-                  <Sun className="h-6 w-6 sm:h-7 sm:w-7 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" strokeWidth={2} />
-                  <Moon className="absolute h-6 w-6 sm:h-7 sm:w-7 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" strokeWidth={2} />
+                  <Sun className="h-7 w-7 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" strokeWidth={2} />
+                  <Moon className="absolute h-7 w-7 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" strokeWidth={2} />
                 </>
               ) : (
-                <Palette className="h-6 w-6 sm:h-7 sm:w-7" strokeWidth={2} />
+                <Palette className="h-7 w-7" strokeWidth={2} />
               )}
               <span className="text-[10px] sm:text-xs font-medium">Тема</span>
             </button>

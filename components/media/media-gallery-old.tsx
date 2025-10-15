@@ -143,6 +143,9 @@ export function MediaGallery({ images, className, compact = false }: MediaGaller
               fill
               className="object-cover"
               sizes={compact ? "(max-width: 768px) 33vw, 25vw" : "(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"}
+              loading="lazy"
+              placeholder="blur"
+              blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iI2VlZSIvPjwvc3ZnPg=="
             />
             {hiddenCount > 0 && index === displayImages.length - 1 && (
               <div className="absolute inset-0 bg-black/75 flex items-center justify-center backdrop-blur-[2px]">

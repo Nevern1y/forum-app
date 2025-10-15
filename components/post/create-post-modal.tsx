@@ -179,15 +179,15 @@ export function CreatePostModal({ open, onOpenChange }: CreatePostModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-gradient-to-b from-background via-background to-muted/5">
-        <DialogHeader className="border-b border-border/50 pb-4">
-          <DialogTitle className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <span className="text-2xl">✍️</span>
+      <DialogContent className="max-w-3xl max-h-[85vh] md:max-h-[90vh] overflow-y-auto bg-gradient-to-b from-background via-background to-muted/5">
+        <DialogHeader className="border-b border-border/50 pb-3 md:pb-4">
+          <DialogTitle className="text-lg md:text-2xl font-bold tracking-tight flex items-center gap-2">
+            <span className="text-xl md:text-2xl">✍️</span>
             Создать пост
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6 pt-2">
+        <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6 pt-2">
           <div className="space-y-2">
             <Label htmlFor="title">
               Заголовок <span className="text-destructive">*</span>

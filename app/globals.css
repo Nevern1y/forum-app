@@ -37,6 +37,14 @@
   --sidebar-accent-foreground: oklch(0.09 0 0);
   --sidebar-border: oklch(0.93 0 0);
   --sidebar-ring: oklch(0.09 0 0);
+  
+  /* Mobile UX Design System */
+  --touch-target-min: 44px;
+  --touch-target-optimal: 48px;
+  --mobile-padding: 16px;
+  --mobile-padding-sm: 12px;
+  --mobile-font-base: 16px;
+  --mobile-line-height: 1.6;
 }
 
 .dark {
@@ -136,6 +144,17 @@ body {
   -moz-osx-font-smoothing: grayscale;
   letter-spacing: -0.014em;
   line-height: 1.6;
+}
+
+/* Mobile-first typography and sizing */
+@media (max-width: 767px) {
+  html {
+    font-size: var(--mobile-font-base);
+  }
+  
+  body {
+    line-height: var(--mobile-line-height);
+  }
 }
 
 /* Enhanced typography */

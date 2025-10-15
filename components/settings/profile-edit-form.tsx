@@ -125,12 +125,12 @@ export function ProfileEditForm({ profile }: ProfileEditFormProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Редактировать профиль</CardTitle>
+        <CardTitle className="text-lg md:text-xl">Редактировать профиль</CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
           {/* Avatar Upload */}
-          <div className="flex flex-col items-center gap-4 pb-6 border-b">
+          <div className="flex flex-col items-center gap-3 md:gap-4 pb-4 md:pb-6 border-b">
             <input
               ref={fileInputRef}
               type="file"
@@ -158,12 +158,12 @@ export function ProfileEditForm({ profile }: ProfileEditFormProps) {
                 )}
               </button>
             </div>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs md:text-sm text-muted-foreground text-center px-2">
               Нажмите на аватар, чтобы изменить (макс. 2MB)
             </p>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-1.5 md:space-y-2">
             <Label htmlFor="username">Имя пользователя</Label>
             <Input id="username" value={profile.username} disabled className="bg-muted" />
             <p className="text-sm text-muted-foreground">Имя пользователя нельзя изменить</p>
