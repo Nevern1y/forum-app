@@ -13,6 +13,7 @@ import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 import { useReactionsRealtime } from "@/hooks/use-reactions-realtime"
 import type { Post } from "@/lib/types"
+import { getProfileLink } from "@/lib/utils/profile"
 
 interface PostCardProps {
   post: Post
@@ -49,6 +50,7 @@ const stripMarkdown = (text: string): string => {
 const PostCardComponent = ({ post }: PostCardProps) => {
   const profile = post.profiles
   const tags = post.post_tags?.map((pt) => pt.tags?.name).filter(Boolean) || []
+  const profileLink = getProfileLink(profile?.username)
   
   const [userReaction, setUserReaction] = useState<string | null>(post.user_reaction || null)
   const [likesCount, setLikesCount] = useState(post.likes)
@@ -227,7 +229,8 @@ const PostCardComponent = ({ post }: PostCardProps) => {
   return (
     <article className={`threads-post group relative ${post.is_pinned ? "bg-primary/5" : ""}`}>
       <div className="flex gap-3 px-4 sm:px-5 py-4 sm:py-5">
-        <Link href={`/profile/${profile?.username}`} className="shrink-0 pt-0.5">
+        {profileLink ? (
+          <Link href={profileLink} className="shrink-0 pt-0.5">
           <Avatar className="h-11 w-11 sm:h-9 sm:w-9 ring-1 ring-border">
             <AvatarImage src={profile?.avatar_url || undefined} />
             <AvatarFallback className="bg-muted text-foreground text-sm font-medium">
@@ -235,16 +238,30 @@ const PostCardComponent = ({ post }: PostCardProps) => {
             </AvatarFallback>
           </Avatar>
         </Link>
+        ) : (
+          <Avatar className="h-11 w-11 sm:h-9 sm:w-9 ring-1 ring-border">
+            <AvatarImage src={profile?.avatar_url || undefined} />
+            <AvatarFallback className="bg-muted text-foreground text-sm font-medium">
+              {(profile?.display_name?.[0] || profile?.username?.[0] || "?").toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+        )}
 
         <div className="flex-1 min-w-0 space-y-1.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5 text-[15px]">
-              <Link 
-                href={`/profile/${profile?.username}`} 
-                className="font-semibold hover:underline text-foreground decoration-1 underline-offset-2"
-              >
-                {profile?.display_name || profile?.username}
-              </Link>
+              {profileLink ? (
+                <Link 
+                  href={profileLink} 
+                  className="font-semibold hover:underline text-foreground decoration-1 underline-offset-2"
+                >
+                  {profile?.display_name || profile?.username}
+                </Link>
+              ) : (
+                <span className="font-semibold text-foreground">
+                  {profile?.display_name || profile?.username || "Пользователь"}
+                </span>
+              )}
               <span className="text-muted-foreground/70">·</span>
               <span className="text-muted-foreground/70 text-sm">
                 {formatDistanceToNow(new Date(post.created_at), {
