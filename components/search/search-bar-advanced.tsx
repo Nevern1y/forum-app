@@ -147,7 +147,7 @@ export function SearchBarAdvanced({
     <div className={cn("relative w-full", className)}>
       {/* Input */}
       <div className="relative group/input">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-hover/input:text-primary transition-colors duration-300 pointer-events-none z-10" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-hover/input:text-primary/70 transition-colors duration-300 pointer-events-none z-10" />
         
         <Input
           ref={inputRef}
@@ -158,7 +158,7 @@ export function SearchBarAdvanced({
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           autoFocus={autoFocus}
-          className="pl-10 pr-10 h-12 text-[15px] border-2 border-border/60 hover:border-primary/40 focus-visible:border-primary focus-visible:ring-4 focus-visible:ring-primary/10 transition-all duration-300 font-medium"
+          className="pl-10 pr-10 h-11 text-[15px] border border-border hover:border-primary/30 focus-visible:border-primary/50 focus-visible:ring-2 focus-visible:ring-primary/10 transition-all duration-300"
         />
 
         {query && (
