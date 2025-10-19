@@ -81,17 +81,22 @@ export default async function PostPage({
   const likes = reactions?.filter((r) => r.reaction_type === "like").length || 0
   const dislikes = reactions?.filter((r) => r.reaction_type === "dislike").length || 0
 
-  // Increment view count (fire and forget с детальным логированием)
+  // Increment view count (fire and forget с защитой от накрутки)
   supabase.rpc("increment_post_views", { post_id: id }).then(({ data, error }) => {
     if (error) {
-      console.error("Failed to increment post views:", {
+      console.error("[Post Views] Failed:", {
         message: error.message,
         details: error.details,
         hint: error.hint,
         code: error.code
       })
-    } else {
-      console.log("✅ Post views incremented successfully")
+    } else if (data) {
+      // Функция возвращает JSON с информацией о просмотре
+      if (data.incremented) {
+        console.log(`[Post Views] ✅ Incremented to ${data.views}`)
+      } else {
+        console.log(`[Post Views] 🕐 Cooldown (${data.cooldown_minutes}min), current: ${data.views}`)
+      }
     }
   })
 
