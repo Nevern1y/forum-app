@@ -5,8 +5,12 @@
 -- Решение: Отслеживаем уникальные просмотры с защитой от накрутки
 -- ============================================================================
 
+-- Шаг 1: Разрешаем NULL для анонимных пользователей
+ALTER TABLE post_views 
+ALTER COLUMN user_id DROP NOT NULL;
+
 -- Проверяем структуру таблицы post_views
-SELECT column_name, data_type 
+SELECT column_name, data_type, is_nullable
 FROM information_schema.columns 
 WHERE table_name = 'post_views' 
 AND table_schema = 'public'
