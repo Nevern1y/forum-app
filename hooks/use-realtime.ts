@@ -60,17 +60,23 @@ export function useRealtime<T = unknown>({
     const channelName = `realtime:${table}:${Date.now()}`
     const channel = supabase.channel(channelName)
 
-    // Настраиваем слушатель
+    // Настраиваем слушатель с правильной конфигурацией
+    const config: any = {
+      event: event,
+      schema: "public",
+      table: table,
+    }
+    
+    // Добавляем фильтр только если он указан
+    if (filter) {
+      config.filter = filter
+    }
+    
     let subscription = channel.on(
-      "postgres_changes" as any,
-      {
-        event: event,
-        schema: "public",
-        table: table,
-        filter: filter,
-      },
+      "postgres_changes",
+      config,
       (payload: RealtimePayload<T>) => {
-        console.log(`[Realtime ${table}]`, payload)
+        console.log(`[Realtime ${table}] Change received:`, payload.eventType)
 
         // Вызываем соответствующий обработчик
         switch (payload.eventType) {
