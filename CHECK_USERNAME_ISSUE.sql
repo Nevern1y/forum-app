@@ -7,7 +7,8 @@ SELECT
   id,
   username,
   display_name,
-  email,
+  avatar_url,
+  reputation,
   created_at
 FROM profiles
 WHERE username ILIKE 'franchik'
@@ -58,12 +59,14 @@ WHERE display_name ILIKE 'franchik'
   AND username != LOWER(display_name);
 
 -- Вариант 2: Создать тестового пользователя (если нужен для тестирования)
-INSERT INTO profiles (id, username, display_name, email)
+-- ВАЖНО: profiles обычно создается через auth.users, поэтому используйте регистрацию
+-- Или если profiles не связан с auth:
+INSERT INTO profiles (id, username, display_name, reputation)
 VALUES (
   gen_random_uuid(),
   'franchik',
   'Franchik',
-  'franchik@test.com'
+  0
 );
 */
 
