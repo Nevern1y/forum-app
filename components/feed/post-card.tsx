@@ -215,7 +215,23 @@ const PostCardComponent = ({ post }: PostCardProps) => {
       // Успех - оставляем оптимистичное обновление как есть
       setIsReacting(false)
     } catch (error: unknown) {
-      console.error('Error handling reaction:', error)
+      // Детальное логирование ошибки
+      if (error && typeof error === 'object') {
+        const err = error as any
+        console.error('[Reaction Error]', {
+          message: err.message,
+          code: err.code,
+          details: err.details,
+          hint: err.hint,
+          status: err.status,
+          full: error
+        })
+        
+        toast.error(err.message || 'Не удалось поставить реакцию')
+      } else {
+        console.error('[Reaction Error] Unknown:', error)
+        toast.error('Произошла ошибка')
+      }
       
       // Откатываем изменения только при ошибке
       setUserReaction(previousReaction)
