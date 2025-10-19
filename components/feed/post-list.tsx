@@ -21,10 +21,21 @@ export async function PostList({ sortBy }: PostListProps) {
   })
 
   if (error) {
-    console.error('Error fetching posts:', error)
+    console.error('Error fetching posts:', {
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code,
+      full: error
+    })
     return (
       <div className="text-center py-16">
         <p className="text-[15px] text-muted-foreground">Ошибка загрузки постов</p>
+        {process.env.NODE_ENV === 'development' && (
+          <p className="text-xs text-muted-foreground mt-2">
+            {error.message || 'Неизвестная ошибка'}
+          </p>
+        )}
       </div>
     )
   }
