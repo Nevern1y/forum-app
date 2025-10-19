@@ -7,6 +7,8 @@ import { searchPosts, getSearchHistory, type SearchResult } from "@/lib/api/sear
 import { PostCard } from "@/components/feed/post-card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Separator } from "@/components/ui/separator"
 import { 
   Search, 
   TrendingUp, 
@@ -17,35 +19,40 @@ import {
   Flame,
   Tag,
   X,
-  ArrowRight
+  ArrowRight,
+  FileText,
+  Users,
+  Hash,
+  Calendar,
+  Star,
+  MessageSquare,
+  Eye,
+  ThumbsUp,
+  SlidersHorizontal
 } from "lucide-react"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-  DropdownMenuLabel,
-} from "@/components/ui/dropdown-menu"
 import Link from "next/link"
 import type { Post } from "@/lib/types"
 
 const trendingSearches = [
   "JavaScript",
-  "React",
+  "React", 
   "Next.js",
   "TypeScript",
   "Tailwind CSS"
 ]
 
-const categories = [
-  { icon: Flame, label: "Популярное", color: "text-orange-500", bgColor: "bg-orange-500/10 hover:bg-orange-500/20" },
-  { icon: TrendingUp, label: "Trending", color: "text-blue-500", bgColor: "bg-blue-500/10 hover:bg-blue-500/20" },
-  { icon: Sparkles, label: "Новое", color: "text-purple-500", bgColor: "bg-purple-500/10 hover:bg-purple-500/20" },
-  { icon: Tag, label: "По тегам", color: "text-green-500", bgColor: "bg-green-500/10 hover:bg-green-500/20" },
+const popularTags = [
+  "JavaScript",
+  "React",
+  "Next.js",
+  "TypeScript",
+  "CSS",
+  "Node.js",
+  "Python",
+  "Database"
 ]
 
-export default function SearchPage() {
+export default function SearchPageV3() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const initialQuery = searchParams.get('q') || ''
@@ -54,8 +61,9 @@ export default function SearchPage() {
   const [results, setResults] = useState<SearchResult[]>([])
   const [loading, setLoading] = useState(false)
   const [sortBy, setSortBy] = useState<'relevance' | 'recent' | 'popular'>('relevance')
+  const [activeTab, setActiveTab] = useState('posts')
   const [history, setHistory] = useState<string[]>([])
-  const [showResults, setShowResults] = useState(!!initialQuery)
+  const [showFilters, setShowFilters] = useState(false)
 
   useEffect(() => {
     setHistory(getSearchHistory())
@@ -64,9 +72,7 @@ export default function SearchPage() {
   useEffect(() => {
     if (query) {
       handleSearch(query)
-      setShowResults(true)
     } else {
-      setShowResults(false)
       setResults([])
     }
   }, [query, sortBy])
@@ -122,77 +128,35 @@ export default function SearchPage() {
     user_reaction: null
   }))
 
+  const hasQuery = query.trim().length > 0
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
-      <div className="container mx-auto max-w-5xl px-4 py-8">
-        {/* Hero Section */}
-        <div className="text-center space-y-6 pt-8 pb-12 relative">
-          {/* Background decoration */}
-          <div className="absolute inset-0 -z-10">
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-primary/5 rounded-full blur-3xl" />
-          </div>
-          
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/20 rounded-full animate-in fade-in slide-in-from-top-4 duration-700">
-            <Sparkles className="h-4 w-4 text-primary animate-pulse" />
-            <span className="text-sm font-medium text-primary">Powered by Full-Text Search</span>
-          </div>
-          
-          <div className="animate-in fade-in slide-in-from-top-8 duration-700 delay-150">
-            <h1 className="text-5xl sm:text-6xl font-bold tracking-tight mb-3 bg-gradient-to-br from-foreground via-foreground to-foreground/70 bg-clip-text text-transparent">
-              Найдите что угодно
-            </h1>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-              Мгновенный поиск по <span className="text-primary font-semibold">постам</span>, <span className="text-primary font-semibold">пользователям</span> и <span className="text-primary font-semibold">темам</span> с умными подсказками
-            </p>
-          </div>
-
-          {/* Search Bar */}
-          <div className="max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
-            <div className="relative group">
-              {/* Subtle gradient glow */}
-              <div className="absolute -inset-[1px] bg-gradient-to-r from-primary/20 via-primary/10 to-primary/20 rounded-xl opacity-0 group-hover:opacity-100 blur transition-opacity duration-300" />
-              
-              <div className="relative bg-background rounded-xl">
-                <SearchBarAdvanced
-                  defaultValue={query}
-                  onSearch={setQuery}
-                  placeholder="Поиск постов, тегов, пользователей..."
-                />
-              </div>
+    <div className="min-h-screen bg-background">
+      {/* Sticky Search Header */}
+      <div className="sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+        <div className="container mx-auto max-w-7xl px-4 py-4">
+          <div className="flex items-center gap-4">
+            <div className="flex-1 max-w-3xl">
+              <SearchBarAdvanced
+                defaultValue={query}
+                onSearch={setQuery}
+                placeholder="Поиск постов, пользователей, тегов..."
+                autoFocus={false}
+              />
             </div>
-          </div>
-
-          {/* Sort & Filter */}
-          {showResults && (
-            <div className="flex items-center justify-center gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <Filter className="h-4 w-4" />
-                    {sortBy === 'relevance' && 'По релевантности'}
-                    {sortBy === 'recent' && 'Сначала новые'}
-                    {sortBy === 'popular' && 'Популярные'}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="center">
-                  <DropdownMenuLabel>Сортировка</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => setSortBy('relevance')}>
-                    <TrendingUp className="h-4 w-4 mr-2" />
-                    По релевантности
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setSortBy('recent')}>
-                    <Clock className="h-4 w-4 mr-2" />
-                    Сначала новые
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setSortBy('popular')}>
-                    <Flame className="h-4 w-4 mr-2" />
-                    Популярные
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {query && (
+            
+            {hasQuery && (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowFilters(!showFilters)}
+                  className="gap-2"
+                >
+                  <SlidersHorizontal className="h-4 w-4" />
+                  <span className="hidden sm:inline">Фильтры</span>
+                </Button>
+                
                 <Button
                   variant="ghost"
                   size="sm"
@@ -200,57 +164,92 @@ export default function SearchPage() {
                     setQuery('')
                     router.push('/search')
                   }}
-                  className="gap-2"
                 >
                   <X className="h-4 w-4" />
-                  Очистить
                 </Button>
-              )}
-            </div>
-          )}
+              </div>
+            )}
+          </div>
         </div>
+      </div>
 
-        {/* Content */}
-        {!showResults ? (
+      <div className="container mx-auto max-w-7xl px-4 py-8">
+        {!hasQuery ? (
+          /* Landing State */
           <div className="space-y-12 max-w-4xl mx-auto">
-            {/* Categories */}
-            <div>
-              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-primary" />
-                Категории
-              </h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {categories.map((category, index) => (
-                  <button
-                    key={index}
-                    style={{ animationDelay: `${index * 100}ms` }}
-                    className={`group p-6 rounded-2xl border border-border ${category.bgColor} transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-${category.color}/20 animate-in fade-in slide-in-from-bottom-4 relative overflow-hidden`}
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-br from-transparent to-black/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <category.icon className={`h-8 w-8 ${category.color} mb-3 relative z-10 group-hover:scale-110 transition-transform duration-300`} />
-                    <p className="font-medium relative z-10">{category.label}</p>
-                  </button>
-                ))}
+            {/* Hero */}
+            <div className="text-center space-y-4 py-12">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-full mb-4">
+                <Sparkles className="h-3.5 w-3.5 text-primary" />
+                <span className="text-xs font-medium text-primary">Full-Text Search Engine</span>
+              </div>
+              
+              <h1 className="text-4xl sm:text-5xl font-bold tracking-tight">
+                Найдите всё что нужно
+              </h1>
+              <p className="text-lg text-muted-foreground max-w-xl mx-auto">
+                Мгновенный поиск по всему контенту форума с умным ранжированием
+              </p>
+            </div>
+
+            {/* Quick Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="p-6 rounded-xl border bg-card hover:shadow-md transition-shadow">
+                <FileText className="h-8 w-8 text-blue-500 mb-3" />
+                <div className="text-2xl font-bold">{results.length}+</div>
+                <div className="text-sm text-muted-foreground">Постов</div>
+              </div>
+              <div className="p-6 rounded-xl border bg-card hover:shadow-md transition-shadow">
+                <Users className="h-8 w-8 text-green-500 mb-3" />
+                <div className="text-2xl font-bold">500+</div>
+                <div className="text-sm text-muted-foreground">Пользователей</div>
+              </div>
+              <div className="p-6 rounded-xl border bg-card hover:shadow-md transition-shadow">
+                <Hash className="h-8 w-8 text-purple-500 mb-3" />
+                <div className="text-2xl font-bold">50+</div>
+                <div className="text-sm text-muted-foreground">Тегов</div>
+              </div>
+              <div className="p-6 rounded-xl border bg-card hover:shadow-md transition-shadow">
+                <TrendingUp className="h-8 w-8 text-orange-500 mb-3" />
+                <div className="text-2xl font-bold">10x</div>
+                <div className="text-sm text-muted-foreground">Быстрее</div>
               </div>
             </div>
 
-            {/* Trending Searches */}
+            {/* Trending */}
             <div>
-              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-primary" />
-                Популярные запросы
-              </h2>
+              <div className="flex items-center gap-2 mb-4">
+                <Flame className="h-5 w-5 text-orange-500" />
+                <h2 className="text-xl font-semibold">Популярные запросы</h2>
+              </div>
               <div className="flex flex-wrap gap-2">
                 {trendingSearches.map((term, index) => (
                   <button
                     key={index}
                     onClick={() => handleQuickSearch(term)}
-                    style={{ animationDelay: `${index * 80}ms` }}
-                    className="group px-4 py-2 bg-muted hover:bg-primary/10 border border-border hover:border-primary/50 rounded-full transition-all duration-200 flex items-center gap-2 hover:shadow-md animate-in fade-in zoom-in-95"
+                    className="group px-4 py-2 bg-muted hover:bg-primary/10 border hover:border-primary/50 rounded-lg transition-all flex items-center gap-2"
                   >
-                    <Flame className="h-3.5 w-3.5 text-orange-500 opacity-0 group-hover:opacity-100 transition-opacity" />
                     <span className="font-medium">{term}</span>
                     <ArrowRight className="h-4 w-4 opacity-0 -ml-2 group-hover:opacity-100 group-hover:ml-0 transition-all" />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Popular Tags */}
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <Hash className="h-5 w-5 text-primary" />
+                <h2 className="text-xl font-semibold">Популярные теги</h2>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {popularTags.map((tag, index) => (
+                  <button
+                    key={index}
+                    onClick={() => handleQuickSearch(`#${tag}`)}
+                    className="px-3 py-1.5 text-sm bg-muted hover:bg-accent border rounded-md transition-colors"
+                  >
+                    #{tag}
                   </button>
                 ))}
               </div>
@@ -259,25 +258,24 @@ export default function SearchPage() {
             {/* Recent Searches */}
             {history.length > 0 && (
               <div>
-                <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                <div className="flex items-center gap-2 mb-4">
                   <Clock className="h-5 w-5 text-primary" />
-                  Недавние поиски
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {history.slice(0, 6).map((term, index) => (
+                  <h2 className="text-xl font-semibold">Недавние поиски</h2>
+                </div>
+                <div className="space-y-2">
+                  {history.slice(0, 5).map((term, index) => (
                     <button
                       key={index}
                       onClick={() => handleQuickSearch(term)}
-                      style={{ animationDelay: `${index * 60}ms` }}
-                      className="group p-4 bg-card border border-border hover:border-primary/50 rounded-xl transition-all duration-200 flex items-center justify-between hover:shadow-md hover:bg-accent/50 animate-in fade-in slide-in-from-left-4"
+                      className="group w-full p-3 bg-card border hover:border-primary/50 rounded-lg transition-all flex items-center justify-between"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-muted group-hover:bg-primary/10 transition-colors">
-                          <Clock className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                        <div className="p-2 rounded-md bg-muted">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
                         </div>
                         <span className="font-medium">{term}</span>
                       </div>
-                      <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
+                      <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                     </button>
                   ))}
                 </div>
@@ -285,98 +283,185 @@ export default function SearchPage() {
             )}
           </div>
         ) : (
-          <div className="space-y-6">
-            {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="text-center space-y-4 animate-in fade-in zoom-in-95 duration-500">
-                  <div className="relative">
-                    <div className="absolute inset-0 animate-ping">
-                      <Loader2 className="h-12 w-12 mx-auto text-primary/30" />
+          /* Search Results */
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            {/* Sidebar Filters */}
+            {showFilters && (
+              <aside className="lg:col-span-1 space-y-6">
+                <div className="sticky top-24">
+                  <div className="p-4 border rounded-lg bg-card space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold flex items-center gap-2">
+                        <Filter className="h-4 w-4" />
+                        Фильтры
+                      </h3>
+                      <Button variant="ghost" size="sm" onClick={() => setSortBy('relevance')}>
+                        Сбросить
+                      </Button>
                     </div>
-                    <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary relative" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">Ищем...</p>
-                    <p className="text-xs text-muted-foreground mt-1">Используем Full-Text Search для быстрых результатов</p>
-                  </div>
-                </div>
-              </div>
-            ) : results.length === 0 ? (
-              <div className="text-center py-16 space-y-6 animate-in fade-in zoom-in-95 duration-500">
-                <div className="relative inline-block">
-                  <div className="absolute inset-0 animate-pulse">
-                    <div className="mx-auto w-20 h-20 rounded-full bg-primary/20" />
-                  </div>
-                  <div className="relative mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center border-2 border-border">
-                    <Search className="h-8 w-8 text-muted-foreground" />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <h3 className="text-xl font-semibold">Ничего не найдено</h3>
-                  <p className="text-muted-foreground max-w-md mx-auto">
-                    Попробуйте изменить запрос или использовать другие фильтры
-                  </p>
-                </div>
-                <div className="flex items-center justify-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setQuery('')
-                      router.push('/search')
-                    }}
-                  >
-                    Начать заново
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="flex items-center justify-between mb-6 p-4 bg-primary/5 border border-primary/20 rounded-xl">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-primary/10">
-                      <Search className="h-4 w-4 text-primary" />
+
+                    <Separator />
+
+                    <div className="space-y-3">
+                      <label className="text-sm font-medium">Сортировка</label>
+                      <div className="space-y-1">
+                        <Button
+                          variant={sortBy === 'relevance' ? 'secondary' : 'ghost'}
+                          size="sm"
+                          className="w-full justify-start"
+                          onClick={() => setSortBy('relevance')}
+                        >
+                          <Star className="h-4 w-4 mr-2" />
+                          По релевантности
+                        </Button>
+                        <Button
+                          variant={sortBy === 'recent' ? 'secondary' : 'ghost'}
+                          size="sm"
+                          className="w-full justify-start"
+                          onClick={() => setSortBy('recent')}
+                        >
+                          <Calendar className="h-4 w-4 mr-2" />
+                          Сначала новые
+                        </Button>
+                        <Button
+                          variant={sortBy === 'popular' ? 'secondary' : 'ghost'}
+                          size="sm"
+                          className="w-full justify-start"
+                          onClick={() => setSortBy('popular')}
+                        >
+                          <Flame className="h-4 w-4 mr-2" />
+                          Популярные
+                        </Button>
+                      </div>
                     </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="secondary" className="text-sm font-semibold">
-                          {results.length} {results.length === 1 ? 'результат' : 'результатов'}
+
+                    <Separator />
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Быстрые фильтры</label>
+                      <div className="flex flex-wrap gap-2">
+                        <Badge variant="outline" className="cursor-pointer hover:bg-accent">
+                          С ответами
                         </Badge>
-                        <span className="text-sm text-muted-foreground">
-                          для запроса "<span className="font-medium text-foreground">{query}</span>"
+                        <Badge variant="outline" className="cursor-pointer hover:bg-accent">
+                          Без ответов
+                        </Badge>
+                        <Badge variant="outline" className="cursor-pointer hover:bg-accent">
+                          Популярные
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </aside>
+            )}
+
+            {/* Main Content */}
+            <main className={showFilters ? "lg:col-span-3" : "lg:col-span-4"}>
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <TabsList>
+                    <TabsTrigger value="posts" className="gap-2">
+                      <FileText className="h-4 w-4" />
+                      Посты
+                      {results.length > 0 && (
+                        <Badge variant="secondary" className="ml-1">{results.length}</Badge>
+                      )}
+                    </TabsTrigger>
+                    <TabsTrigger value="users" className="gap-2">
+                      <Users className="h-4 w-4" />
+                      Пользователи
+                    </TabsTrigger>
+                    <TabsTrigger value="tags" className="gap-2">
+                      <Hash className="h-4 w-4" />
+                      Теги
+                    </TabsTrigger>
+                  </TabsList>
+
+                  {!showFilters && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowFilters(true)}
+                      className="gap-2"
+                    >
+                      <SlidersHorizontal className="h-4 w-4" />
+                      Фильтры
+                    </Button>
+                  )}
+                </div>
+
+                <TabsContent value="posts" className="space-y-4">
+                  {loading ? (
+                    <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                      <div className="text-center">
+                        <p className="font-medium">Ищем...</p>
+                        <p className="text-sm text-muted-foreground">Full-Text Search работает</p>
+                      </div>
+                    </div>
+                  ) : results.length === 0 ? (
+                    <div className="text-center py-12 space-y-4">
+                      <div className="mx-auto w-16 h-16 rounded-full bg-muted flex items-center justify-center">
+                        <Search className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold mb-2">Ничего не найдено</h3>
+                        <p className="text-muted-foreground">
+                          Попробуйте изменить запрос или фильтры
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setQuery('')
+                          router.push('/search')
+                        }}
+                      >
+                        Начать заново
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-2 p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                        <Search className="h-4 w-4 text-primary" />
+                        <span className="text-sm">
+                          Найдено <strong>{results.length}</strong> {results.length === 1 ? 'результат' : 'результатов'} для <strong>"{query}"</strong>
                         </span>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Сортировка: {sortBy === 'relevance' ? 'по релевантности' : sortBy === 'recent' ? 'сначала новые' : 'популярные'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
 
-                <div className="space-y-4">
-                  {transformedPosts.map((post, index) => (
-                    <div
-                      key={post.id}
-                      style={{ animationDelay: `${index * 50}ms` }}
-                      className="animate-in fade-in slide-in-from-bottom-2"
-                    >
-                      <PostCard post={post} />
-                    </div>
-                  ))}
-                </div>
+                      <div className="space-y-4">
+                        {transformedPosts.map((post) => (
+                          <PostCard key={post.id} post={post} />
+                        ))}
+                      </div>
 
-                {results.length >= 20 && (
-                  <div className="text-center py-6 animate-in fade-in duration-500">
-                    <p className="text-sm text-muted-foreground mb-3">
-                      Показано {results.length} результатов
-                    </p>
-                    <Button variant="outline" size="sm" disabled>
-                      Пагинация скоро...
-                    </Button>
+                      {results.length >= 20 && (
+                        <div className="text-center py-4">
+                          <Button variant="outline" disabled>
+                            Загрузить ещё
+                          </Button>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="users" className="space-y-4">
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>Поиск пользователей скоро...</p>
                   </div>
-                )}
-              </div>
-            )}
+                </TabsContent>
+
+                <TabsContent value="tags" className="space-y-4">
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Hash className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>Поиск по тегам скоро...</p>
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </main>
           </div>
         )}
       </div>
