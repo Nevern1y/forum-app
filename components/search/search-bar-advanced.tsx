@@ -178,7 +178,8 @@ export function SearchBarAdvanced({
       {(showHistory || showSuggestions) && (
         <div
           ref={dropdownRef}
-          className="absolute top-full mt-2 w-full bg-card border border-border/50 rounded-xl shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200"
+          className="absolute top-full mt-2 w-full bg-card border border-border rounded-xl shadow-2xl overflow-hidden z-[100] pointer-events-auto animate-in fade-in slide-in-from-top-2 duration-200"
+          style={{ isolation: 'isolate' }}
         >
           {/* History */}
           {showHistory && (
