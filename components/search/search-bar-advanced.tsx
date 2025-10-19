@@ -178,51 +178,65 @@ export function SearchBarAdvanced({
       {(showHistory || showSuggestions) && (
         <div
           ref={dropdownRef}
-          className="absolute top-full mt-2 w-full bg-popover/98 backdrop-blur-md border border-border rounded-lg shadow-2xl overflow-hidden z-50 animate-in slide-in-from-top-2 duration-200"
+          className="absolute top-full mt-2 w-full bg-card border border-border/50 rounded-xl shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200"
         >
           {/* History */}
           {showHistory && (
-            <div>
-              <div className="flex items-center justify-between px-4 py-2 border-b border-border">
-                <span className="text-xs font-medium text-muted-foreground">Недавние поиски</span>
+            <div className="py-2">
+              <div className="flex items-center justify-between px-4 py-2 mb-1">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-xs font-semibold text-foreground">Недавние поиски</span>
+                </div>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={handleClearHistory}
-                  className="h-6 text-xs px-2 hover:text-destructive"
+                  className="h-7 text-xs px-2 hover:bg-destructive/10 hover:text-destructive rounded-md"
                 >
                   Очистить
                 </Button>
               </div>
-              <div>
+              <div className="space-y-0.5 px-2">
                 {history.slice(0, 5).map((item, index) => (
                   <button
                     key={index}
                     onClick={() => handleSuggestionClick(item)}
                     className={cn(
-                      "w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-accent transition-colors",
-                      selectedIndex === index && "bg-accent"
+                      "w-full flex items-center gap-3 px-3 py-2.5 text-left rounded-lg transition-all duration-200 group",
+                      selectedIndex === index 
+                        ? "bg-primary/10 text-foreground" 
+                        : "hover:bg-accent/50 text-foreground"
                     )}
                   >
-                    <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    <span className="text-sm flex-1 truncate">{item}</span>
+                    <div className="p-1.5 rounded-md bg-muted/50 group-hover:bg-muted transition-colors">
+                      <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                    </div>
+                    <span className="text-sm flex-1 truncate font-medium">{item}</span>
+                    <Search className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                   </button>
                 ))}
               </div>
             </div>
           )}
 
+          {/* Separator */}
+          {showHistory && showSuggestions && (
+            <div className="border-t border-border/50 my-1" />
+          )}
+
           {/* Suggestions */}
           {showSuggestions && (
-            <div>
+            <div className="py-2">
               {query.length >= 2 && (
-                <div className="px-4 py-2 border-b border-border">
-                  <span className="text-xs font-medium text-muted-foreground">
+                <div className="flex items-center gap-2 px-4 py-2 mb-1">
+                  <TrendingUp className="h-3.5 w-3.5 text-primary" />
+                  <span className="text-xs font-semibold text-foreground">
                     {loading ? "Загрузка..." : "Предложения"}
                   </span>
                 </div>
               )}
-              <div>
+              <div className="space-y-0.5 px-2">
                 {suggestions.map((item, index) => {
                   const absoluteIndex = history.length + index
                   return (
@@ -230,14 +244,18 @@ export function SearchBarAdvanced({
                       key={index}
                       onClick={() => handleSuggestionClick(item.suggestion)}
                       className={cn(
-                        "w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-accent transition-colors group",
-                        selectedIndex === absoluteIndex && "bg-accent"
+                        "w-full flex items-center gap-3 px-3 py-2.5 text-left rounded-lg transition-all duration-200 group",
+                        selectedIndex === absoluteIndex 
+                          ? "bg-primary/10 text-foreground" 
+                          : "hover:bg-accent/50 text-foreground"
                       )}
                     >
-                      {getIcon(item.type)}
-                      <span className="text-sm flex-1 truncate">{item.suggestion}</span>
+                      <div className="p-1.5 rounded-md bg-muted/50 group-hover:bg-muted transition-colors">
+                        {getIcon(item.type)}
+                      </div>
+                      <span className="text-sm flex-1 truncate font-medium">{item.suggestion}</span>
                       {item.count > 0 && (
-                        <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full tabular-nums">
+                        <span className="text-xs font-semibold text-primary bg-primary/10 px-2 py-1 rounded-md tabular-nums">
                           {item.count}
                         </span>
                       )}
