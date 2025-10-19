@@ -242,7 +242,9 @@ function NotificationContent({ notification, relatedUser }: NotificationContentP
       )}
 
       <div className="flex-1 min-w-0 space-y-1 pr-8">
-        <p className="text-sm font-medium line-clamp-2 leading-snug">{notification.content}</p>
+        <p className="text-sm font-medium line-clamp-2 leading-snug">
+          {notification.message || notification.content || notification.title}
+        </p>
         <p className="text-xs text-muted-foreground/70 flex items-center gap-1">
           <span className="inline-block w-1 h-1 rounded-full bg-muted-foreground/50" />
           {formatDistanceToNow(new Date(notification.created_at), {

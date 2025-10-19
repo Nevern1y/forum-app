@@ -36,21 +36,35 @@ export interface Post {
 export interface Notification {
   id: string
   user_id: string
-  type: 'comment' | 'like' | 'follow' | 'mention'
-  content: string
-  link: string | null
-  is_read: boolean
-  created_at: string
+  type: 
+    | 'friend_request' 
+    | 'friend_accepted' 
+    | 'new_message' 
+    | 'post_shared'
+    | 'post_like'
+    | 'post_comment'
+    | 'comment_reply'
+    | 'mention'
   related_user_id?: string
-  related_post_id?: string
+  related_content_id?: string
+  title: string
+  message?: string | null
+  link?: string | null
+  is_read: boolean
+  read_at?: string | null
+  created_at: string
   related_user?: {
+    id: string
     username: string
     display_name: string | null
+    avatar_url?: string | null
   }
   related_post?: {
     id: string
     title: string
   }
+  // Для обратной совместимости с старым кодом
+  content?: string
 }
 
 export interface Reaction {

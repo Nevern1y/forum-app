@@ -37,8 +37,8 @@ export function NotificationBell() {
     userId: userId || "",
     onNewNotification: (notification) => {
       setUnreadCount((prev) => prev + 1)
-      toast.info("Новое уведомление", {
-        description: notification.content,
+      toast.info(notification.title || "Новое уведомление", {
+        description: notification.message || notification.content,
       })
     },
     onNotificationsChange: () => {
