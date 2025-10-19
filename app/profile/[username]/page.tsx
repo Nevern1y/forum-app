@@ -27,15 +27,18 @@ export default async function ProfilePage({
     redirect("/auth/login")
   }
 
-  // Decode username in case it's URL encoded
-  const decodedUsername = decodeURIComponent(username)
+  // Decode username in case it's URL encoded and trim spaces
+  const decodedUsername = decodeURIComponent(username).trim()
 
-  // Get profile data (case-insensitive search)
-  const { data: profile, error } = await supabase
+  // Get profile data (case-insensitive search with TRIM to handle spaces)
+  const { data: profiles, error: searchError } = await supabase
     .from("profiles")
     .select("*")
     .ilike("username", decodedUsername)
-    .single()
+    .limit(1)
+  
+  const profile = profiles?.[0]
+  const error = profile ? null : searchError
 
   if (error || !profile) {
     console.error('[Profile Page] User not found:', decodedUsername, error)
