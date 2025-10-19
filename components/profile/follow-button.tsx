@@ -8,16 +8,14 @@ import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 
 interface FollowButtonProps {
-  userId: string
-  initialIsFollowing: boolean
-  username: string
+  profileId: string
+  isFollowing: boolean
   className?: string
 }
 
 export function FollowButton({
-  userId,
-  initialIsFollowing,
-  username,
+  profileId,
+  isFollowing: initialIsFollowing,
   className = ""
 }: FollowButtonProps) {
   const [isFollowing, setIsFollowing] = useState(initialIsFollowing)
@@ -28,16 +26,16 @@ export function FollowButton({
     setIsLoading(true)
 
     try {
-      const result = await toggleFollow(userId)
+      const result = await toggleFollow(profileId)
 
       setIsFollowing(result.following)
 
       if (result.action === 'followed') {
-        toast.success(`Вы подписались на @${username}`, {
+        toast.success("Подписка оформлена!", {
           description: "Посты этого пользователя появятся в вашей ленте"
         })
       } else {
-        toast.info(`Вы отписались от @${username}`)
+        toast.info("Вы отписались")
       }
 
       // Refresh to update counts
@@ -57,8 +55,8 @@ export function FollowButton({
       onClick={handleToggleFollow}
       disabled={isLoading}
       variant={isFollowing ? "outline" : "default"}
-      size="default"
-      className={`gap-2 font-semibold transition-all duration-200 ${className}`}
+      size="sm"
+      className={`h-10 px-6 rounded-full gap-2 font-medium shadow-sm hover:shadow-md transition-all duration-200 ${className}`}
     >
       {isLoading ? (
         <>
