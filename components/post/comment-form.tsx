@@ -13,6 +13,7 @@ import { Send, Image as ImageIcon, Mic, X } from "lucide-react"
 import { toast } from "sonner"
 import { ImageUploader } from "@/components/media/image-uploader"
 import { VoiceRecorder } from "@/components/media/voice-recorder"
+import { notifyMentions } from "@/lib/utils/mentions"
 
 interface CommentFormProps {
   postId: string
@@ -49,16 +50,31 @@ export function CommentForm({ postId, parentId = null, onCancel, onSuccess }: Co
       } = await supabase.auth.getUser()
       if (!user) throw new Error("Необходима авторизация")
 
-      const { error: commentError } = await supabase.from("comments").insert({
+      const { data: newComment, error: commentError } = await supabase.from("comments").insert({
         post_id: postId,
         author_id: user.id,
         parent_id: parentId,
         content,
         media_urls: mediaUrls.length > 0 ? mediaUrls : null,
         audio_url: audioUrl || null,
-      })
+      }).select().single()
 
       if (commentError) throw commentError
+
+      // Notify mentioned users
+      if (newComment) {
+        try {
+          await notifyMentions({
+            content,
+            postId,
+            mentionerId: user.id,
+            mentionType: 'comment'
+          })
+        } catch (mentionError) {
+          console.error('Error notifying mentions:', mentionError)
+          // Don't fail the comment creation if mentions fail
+        }
+      }
 
       setContent("")
       setMediaUrls([])

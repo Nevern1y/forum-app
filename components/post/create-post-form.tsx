@@ -17,6 +17,7 @@ import { toast } from "sonner"
 import { DraftList, useAutoSave, useDraftManager, type Draft } from "./draft-manager"
 import { ImageUploader } from "@/components/media/image-uploader"
 import { VoiceRecorder } from "@/components/media/voice-recorder"
+import { notifyMentions } from "@/lib/utils/mentions"
 
 const MIN_TITLE_LENGTH = 1
 const MAX_TITLE_LENGTH = 200
@@ -135,6 +136,20 @@ export function CreatePostForm() {
             })
           }
         }
+      }
+
+      // Notify mentioned users
+      try {
+        const fullContent = `${title}\n\n${content}`
+        await notifyMentions({
+          content: fullContent,
+          postId: post.id,
+          mentionerId: user.id,
+          mentionType: 'post'
+        })
+      } catch (mentionError) {
+        console.error('Error notifying mentions:', mentionError)
+        // Don't fail the post creation if mentions fail
       }
 
       // Delete draft if it was loaded
