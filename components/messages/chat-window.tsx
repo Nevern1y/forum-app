@@ -123,9 +123,9 @@ export function ChatWindow({ currentUserId, otherUser, embedded = false, onClose
               sender:sender_id (id, username, display_name, avatar_url),
               shared_post:shared_post_id (
                 id, 
-                title, 
-                content,
-                views
+                title,
+                views,
+                media_urls
               )
             `)
             .eq("id", newMessage.id)
@@ -424,46 +424,84 @@ export function ChatWindow({ currentUserId, otherUser, embedded = false, onClose
                         {message.shared_post_id && message.shared_post && (
                           <Link
                             href={`/post/${message.shared_post_id}`}
-                            className="block mb-2 p-3.5 rounded-xl border bg-white dark:bg-[#1a1a1a] border-gray-200 dark:border-[#2a2a2a] hover:bg-gray-50 dark:hover:bg-[#252525] transition-colors duration-200 group"
+                            className={cn(
+                              "block mb-2 overflow-hidden border-2 transition-all duration-300 group shadow-sm hover:shadow-md",
+                              message.shared_post.media_urls && message.shared_post.media_urls.length > 0
+                                ? "rounded-2xl bg-gradient-to-br from-white to-gray-50 dark:from-[#1a1a1a] dark:to-[#151515] border-gray-200 dark:border-[#2a2a2a] hover:border-primary/50 dark:hover:border-primary/50"
+                                : "rounded-xl bg-white dark:bg-[#1a1a1a] border-gray-200 dark:border-[#2a2a2a] hover:border-primary/40 dark:hover:border-primary/40"
+                            )}
                           >
-                            <div className="flex items-start gap-3">
-                              {/* Иконка */}
-                              <div className="shrink-0 w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-                                <ExternalLink className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                              </div>
-                              
-                              <div className="flex-1 min-w-0">
-                                {/* Бейдж */}
-                                <div className="flex items-center gap-2 mb-1.5">
-                                  <span className="text-[10px] font-medium uppercase tracking-wider text-gray-500 dark:text-gray-500">
-                                    📄 Пост
-                                  </span>
+                            {/* Изображение поста если есть - ПОЛНОРАЗМЕРНАЯ КАРТОЧКА */}
+                            {message.shared_post.media_urls && message.shared_post.media_urls.length > 0 ? (
+                              <>
+                                <div className="relative w-full h-40 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 overflow-hidden">
+                                  <img
+                                    src={message.shared_post.media_urls[0]}
+                                    alt={message.shared_post.title}
+                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                  />
+                                  {message.shared_post.media_urls.length > 1 && (
+                                    <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-sm text-white text-xs px-2 py-1 rounded-full font-medium">
+                                      +{message.shared_post.media_urls.length - 1}
+                                    </div>
+                                  )}
                                 </div>
                                 
-                                {/* Заголовок */}
-                                <h4 className="font-semibold text-sm leading-snug line-clamp-2 mb-1.5 text-gray-900 dark:text-white">
-                                  {message.shared_post.title}
-                                </h4>
-                                
-                                {/* Превью контента */}
-                                {message.shared_post.content && (
-                                  <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2 leading-relaxed mb-2">
-                                    {stripMarkdown(message.shared_post.content).substring(0, 150)}
-                                    {stripMarkdown(message.shared_post.content).length > 150 && "..."}
-                                  </p>
-                                )}
-                                
-                                {/* Мини-статистика */}
-                                {message.shared_post.views > 0 && (
-                                  <div className="flex items-center gap-3 text-[11px] text-gray-500 dark:text-gray-500">
-                                    <div className="flex items-center gap-1">
-                                      <Eye className="h-3 w-3" />
-                                      <span>{message.shared_post.views}</span>
+                                <div className="p-4">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-primary/10 dark:bg-primary/20">
+                                      <ExternalLink className="h-3 w-3 text-primary" />
+                                      <span className="text-[10px] font-semibold uppercase tracking-wider text-primary">
+                                        Пост
+                                      </span>
                                     </div>
                                   </div>
-                                )}
+                                  
+                                  <h4 className="font-bold text-base leading-snug line-clamp-2 text-gray-900 dark:text-white group-hover:text-primary dark:group-hover:text-primary transition-colors">
+                                    {message.shared_post.title}
+                                  </h4>
+                                  
+                                  {message.shared_post.views > 0 && (
+                                    <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-500">
+                                      <div className="flex items-center gap-1.5">
+                                        <Eye className="h-3.5 w-3.5" />
+                                        <span className="font-medium">{message.shared_post.views} просмотров</span>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </>
+                            ) : (
+                              /* КОМПАКТНАЯ КАРТОЧКА для постов без изображений */
+                              <div className="p-3">
+                                <div className="flex gap-3">
+                                  {/* Иконка слева */}
+                                  <div className="shrink-0 w-10 h-10 rounded-lg bg-gradient-to-br from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                    <ExternalLink className="h-5 w-5 text-primary" />
+                                  </div>
+                                  
+                                  <div className="flex-1 min-w-0">
+                                    {/* Badge */}
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <span className="text-[10px] font-semibold uppercase tracking-wider text-primary">
+                                        📄 Пост
+                                      </span>
+                                      {message.shared_post.views > 0 && (
+                                        <span className="text-[10px] text-gray-500 dark:text-gray-500 flex items-center gap-1">
+                                          <Eye className="h-3 w-3" />
+                                          {message.shared_post.views}
+                                        </span>
+                                      )}
+                                    </div>
+                                    
+                                    {/* Заголовок */}
+                                    <h4 className="font-semibold text-sm leading-snug line-clamp-2 text-gray-900 dark:text-white group-hover:text-primary dark:group-hover:text-primary transition-colors">
+                                      {message.shared_post.title}
+                                    </h4>
+                                  </div>
+                                </div>
                               </div>
-                            </div>
+                            )}
                           </Link>
                         )}
 

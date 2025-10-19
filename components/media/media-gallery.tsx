@@ -20,9 +20,31 @@ const MediaGalleryComponent = ({ images, className = "", compact = false, disabl
   const [mounted, setMounted] = useState(false)
   const [imageErrors, setImageErrors] = useState<Set<number>>(new Set())
 
+  const handleImageError = useCallback((index: number) => {
+    setImageErrors(prev => new Set(prev).add(index))
+  }, [])
+
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  // Keyboard navigation
+  useEffect(() => {
+    if (selectedIndex === null) return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        closeLightbox()
+      } else if (e.key === "ArrowLeft") {
+        setSelectedIndex(prev => (prev !== null && prev > 0) ? prev - 1 : prev)
+      } else if (e.key === "ArrowRight") {
+        setSelectedIndex(prev => (prev !== null && prev < images.length - 1) ? prev + 1 : prev)
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [selectedIndex, images.length])
 
   if (images.length === 0) return null
 
@@ -55,10 +77,6 @@ const MediaGalleryComponent = ({ images, className = "", compact = false, disabl
     }
   }
 
-  const handleImageError = useCallback((index: number) => {
-    setImageErrors(prev => new Set(prev).add(index))
-  }, [])
-
   const downloadImage = () => {
     if (selectedIndex === null) return
     const link = document.createElement("a")
@@ -66,24 +84,6 @@ const MediaGalleryComponent = ({ images, className = "", compact = false, disabl
     link.download = `image-${selectedIndex + 1}.jpg`
     link.click()
   }
-
-  // Keyboard navigation
-  useEffect(() => {
-    if (selectedIndex === null) return
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        closeLightbox()
-      } else if (e.key === "ArrowLeft") {
-        setSelectedIndex(prev => (prev !== null && prev > 0) ? prev - 1 : prev)
-      } else if (e.key === "ArrowRight") {
-        setSelectedIndex(prev => (prev !== null && prev < images.length - 1) ? prev + 1 : prev)
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown)
-    return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [selectedIndex, images.length])
 
   // Grid layout classes
   const getGridCols = () => {

@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { Home, Search, User, MoreHorizontal, Settings, Bookmark, Flag, LogOut, List, MessageCircle, Users, Heart, Sparkles } from "lucide-react"
+import { useState, useEffect } from "react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,6 +15,9 @@ import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { NotificationBell } from "@/components/notifications/notification-bell"
+import { Badge } from "@/components/ui/badge"
+import { getUnreadCount } from "@/lib/api/messages"
+import { useMessagesRealtime } from "@/hooks/use-messages-realtime"
 
 interface NavigationSidebarProps {
   username?: string
@@ -22,6 +26,48 @@ interface NavigationSidebarProps {
 export function NavigationSidebar({ username }: NavigationSidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
+  const [userId, setUserId] = useState<string | null>(null)
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0)
+
+  useEffect(() => {
+    loadUser()
+  }, [])
+
+  useEffect(() => {
+    if (!userId) return
+    loadUnreadMessagesCount()
+  }, [userId])
+
+  // Realtime подписка на сообщения
+  useMessagesRealtime({
+    userId: userId || "",
+    onNewMessage: () => {
+      setUnreadMessagesCount((prev) => prev + 1)
+    },
+    onMessagesChange: () => {
+      if (userId) loadUnreadMessagesCount()
+    },
+  })
+
+  async function loadUser() {
+    const supabase = createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (user) {
+      setUserId(user.id)
+    }
+  }
+
+  async function loadUnreadMessagesCount() {
+    if (!userId) return
+    try {
+      const count = await getUnreadCount(userId)
+      setUnreadMessagesCount(count)
+    } catch (error) {
+      console.error("Error loading unread messages count:", error)
+    }
+  }
 
   const handleLogout = async () => {
     const supabase = createClient()
@@ -49,6 +95,8 @@ export function NavigationSidebar({ username }: NavigationSidebarProps) {
       <nav className="flex-1 flex flex-col items-center justify-center gap-4 w-full">
         {navItems.map((item) => {
           const isActive = pathname === item.href
+          const isMessages = item.href === "/messages"
+          const hasBadge = isMessages && unreadMessagesCount > 0
           return (
             <Link
               key={item.href}
@@ -62,6 +110,17 @@ export function NavigationSidebar({ username }: NavigationSidebarProps) {
               title={item.label}
             >
               <item.icon className="h-6 w-6" />
+              {hasBadge && (
+                <>
+                  <Badge
+                    variant="destructive"
+                    className="absolute -top-1 -right-1 h-5 min-w-5 px-1 flex items-center justify-center text-[10px] font-bold shadow-lg animate-pulse border-2 border-background"
+                  >
+                    {unreadMessagesCount > 99 ? "99+" : unreadMessagesCount}
+                  </Badge>
+                  <span className="absolute -top-0.5 -right-0.5 h-3 w-3 bg-red-500 rounded-full animate-ping" />
+                </>
+              )}
             </Link>
           )
         })}

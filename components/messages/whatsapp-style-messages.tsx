@@ -242,14 +242,14 @@ export function WhatsAppStyleMessages({ userId, currentUser }: WhatsAppStyleMess
                   <div className="flex items-center justify-between">
                     {/* Превью сообщения или статистика поста */}
                     {chat.lastMessageData?.shared_post_id && chat.lastMessageData?.shared_post ? (
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground dark:text-gray-500">
-                        <span className="truncate">📄 {chat.lastMessageData.shared_post.title}</span>
-                        {chat.lastMessageData.shared_post.views > 0 && (
-                          <span className="shrink-0 flex items-center gap-0.5">
-                            <Eye className="h-3 w-3" />
-                            {chat.lastMessageData.shared_post.views}
-                          </span>
-                        )}
+                      <div className="flex items-center gap-1.5 text-xs flex-1 min-w-0">
+                        <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-primary/10 dark:bg-primary/20 shrink-0">
+                          <MessageCircle className="h-3 w-3 text-primary" />
+                          <span className="text-[10px] font-semibold text-primary uppercase">Пост</span>
+                        </div>
+                        <span className="truncate text-foreground/80 dark:text-gray-400 font-medium">
+                          {chat.lastMessageData.shared_post.title}
+                        </span>
                       </div>
                     ) : chat.lastMessageData ? (
                       <p className="text-sm text-muted-foreground dark:text-gray-500 truncate">

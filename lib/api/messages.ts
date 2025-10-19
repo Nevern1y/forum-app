@@ -77,12 +77,7 @@ export async function getConversations(userId: string) {
           content,
           audio_url,
           media_urls,
-          shared_post_id,
-          shared_post:shared_post_id (
-            id,
-            title,
-            views
-          )
+          shared_post_id
         `)
         .eq("conversation_id", conv.id)
         .order("created_at", { ascending: false })
@@ -115,30 +110,68 @@ export async function getConversations(userId: string) {
 export async function getMessages(conversationId: string, limit: number = 50) {
   const supabase = createClient()
 
-  const { data, error } = await supabase
-    .from("direct_messages")
-    .select(
-      `
-      *,
-      sender:sender_id (id, username, display_name, avatar_url),
-      shared_post:shared_post_id (
-        id, 
-        title, 
+  try {
+    const { data, error } = await supabase
+      .from("direct_messages")
+      .select(
+        `
+        id,
+        conversation_id,
+        sender_id,
+        receiver_id,
         content,
-        views
+        media_urls,
+        audio_url,
+        shared_post_id,
+        is_read,
+        read_at,
+        created_at,
+        sender:sender_id (id, username, display_name, avatar_url)
+      `
       )
-    `
-    )
-    .eq("conversation_id", conversationId)
-    .order("created_at", { ascending: false })
-    .limit(limit)
+      .eq("conversation_id", conversationId)
+      .order("created_at", { ascending: false })
+      .limit(limit)
 
-  if (error) {
+    if (error) {
+      console.error("Error getting messages:", error)
+      return []
+    }
+
+    // Отдельно загрузить информацию о постах для сообщений с shared_post_id
+    const messagesWithPosts = data || []
+    const postIds = [...new Set(messagesWithPosts
+      .filter(msg => msg.shared_post_id)
+      .map(msg => msg.shared_post_id))]
+
+    if (postIds.length > 0) {
+      try {
+        const { data: posts, error: postsError } = await supabase
+          .from("posts")
+          .select("id, title, views, media_urls")
+          .in("id", postIds)
+
+        if (postsError) {
+          console.error("Error loading posts for messages:", postsError)
+        } else if (posts && posts.length > 0) {
+          const postsMap = new Map(posts.map(p => [p.id, p]))
+          messagesWithPosts.forEach(msg => {
+            if (msg.shared_post_id) {
+              msg.shared_post = postsMap.get(msg.shared_post_id) || null
+            }
+          })
+        }
+      } catch (postsErr) {
+        console.error("Failed to load posts:", postsErr)
+        // Продолжаем без постов
+      }
+    }
+
+    return messagesWithPosts.reverse()
+  } catch (error) {
     console.error("Error getting messages:", error)
     return []
   }
-
-  return data.reverse()
 }
 
 /**

@@ -2,10 +2,16 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Home, Search, Heart, User, Users, MessageCircle, Palette, Sun, Moon, Monitor, Check } from "lucide-react"
+import { Home, Search, Heart, User, Users, MessageCircle, Palette, Sun, Moon, Monitor, Check, Bell } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useTheme } from "next-themes"
 import { useState, useEffect } from "react"
+import { Badge } from "@/components/ui/badge"
+import { createClient } from "@/lib/supabase/client"
+import { getUnreadNotificationsCount } from "@/lib/api/notifications"
+import { useNotificationsRealtime } from "@/hooks/use-notifications-realtime"
+import { getUnreadCount } from "@/lib/api/messages"
+import { useMessagesRealtime } from "@/hooks/use-messages-realtime"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,15 +27,77 @@ export function MobileNavigation({ username }: MobileNavigationProps) {
   const pathname = usePathname()
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
+  const [userId, setUserId] = useState<string | null>(null)
+  const [unreadCount, setUnreadCount] = useState(0)
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0)
 
   useEffect(() => {
     setMounted(true)
+    loadUser()
   }, [])
+
+  useEffect(() => {
+    if (!userId) return
+    loadUnreadCount()
+    loadUnreadMessagesCount()
+  }, [userId])
+
+  // Realtime подписка на уведомления
+  useNotificationsRealtime({
+    userId: userId || "",
+    onNewNotification: () => {
+      setUnreadCount((prev) => prev + 1)
+    },
+    onNotificationsChange: () => {
+      if (userId) loadUnreadCount()
+    },
+  })
+
+  // Realtime подписка на сообщения
+  useMessagesRealtime({
+    userId: userId || "",
+    onNewMessage: () => {
+      setUnreadMessagesCount((prev) => prev + 1)
+    },
+    onMessagesChange: () => {
+      if (userId) loadUnreadMessagesCount()
+    },
+  })
+
+  async function loadUser() {
+    const supabase = createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (user) {
+      setUserId(user.id)
+    }
+  }
+
+  async function loadUnreadCount() {
+    if (!userId) return
+    try {
+      const count = await getUnreadNotificationsCount(userId)
+      setUnreadCount(count)
+    } catch (error) {
+      console.error("Error loading unread count:", error)
+    }
+  }
+
+  async function loadUnreadMessagesCount() {
+    if (!userId) return
+    try {
+      const count = await getUnreadCount(userId)
+      setUnreadMessagesCount(count)
+    } catch (error) {
+      console.error("Error loading unread messages count:", error)
+    }
+  }
 
   const navItems = [
     { href: "/feed", icon: Home, label: "Главная" },
-    { href: "/search", icon: Search, label: "Поиск" },
-    { href: "/messages", icon: MessageCircle, label: "Сообщения" },
+    { href: "/notifications", icon: Bell, label: "Уведомления", badge: unreadCount },
+    { href: "/messages", icon: MessageCircle, label: "Сообщения", badge: unreadMessagesCount },
     { href: `/profile/${username}`, icon: User, label: "Профиль" },
   ]
 
@@ -44,18 +112,32 @@ export function MobileNavigation({ username }: MobileNavigationProps) {
       <div className="flex items-center justify-around h-16 px-2">
         {navItems.map((item) => {
           const isActive = pathname === item.href
+          const hasBadge = 'badge' in item && item.badge && item.badge > 0
           return (
             <Link
               key={item.href}
               href={item.href}
               className={cn(
-                "flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-all rounded-lg active:scale-95",
+                "flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-all rounded-lg active:scale-95 relative",
                 isActive 
                   ? "text-primary font-medium" 
                   : "text-muted-foreground active:bg-accent/50"
               )}
             >
-              <item.icon className="h-7 w-7" strokeWidth={isActive ? 2.5 : 2} />
+              <div className="relative">
+                <item.icon className="h-7 w-7" strokeWidth={isActive ? 2.5 : 2} />
+                {hasBadge && (
+                  <>
+                    <Badge
+                      variant="destructive"
+                      className="absolute -top-1.5 -right-2.5 h-5 min-w-5 px-1 flex items-center justify-center text-[10px] font-bold shadow-lg animate-pulse border-2 border-background"
+                    >
+                      {item.badge! > 99 ? "99+" : item.badge}
+                    </Badge>
+                    <span className="absolute -top-1 -right-2 h-3 w-3 bg-red-500 rounded-full animate-ping" />
+                  </>
+                )}
+              </div>
               <span className="text-[10px] sm:text-xs font-medium">{item.label}</span>
             </Link>
           )

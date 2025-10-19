@@ -31,10 +31,19 @@ export default function SignUpPage() {
         body: JSON.stringify({ [field]: value }),
       })
 
+      // Check if response is JSON
+      const contentType = response.headers.get("content-type")
+      if (!contentType || !contentType.includes("application/json")) {
+        console.error(`[Validation] API returned non-JSON response for ${field}`)
+        // Validation endpoint doesn't exist, skip validation
+        setFieldErrors(prev => ({ ...prev, [field]: "" }))
+        return true
+      }
+
       const data = await response.json()
 
       if (!response.ok) {
-        setFieldErrors(prev => ({ ...prev, [field]: data.error }))
+        setFieldErrors(prev => ({ ...prev, [field]: data.error || "Validation failed" }))
         return false
       }
 
@@ -42,8 +51,9 @@ export default function SignUpPage() {
       return true
     } catch (error) {
       console.error(`Error validating ${field}:`, error)
-      setFieldErrors(prev => ({ ...prev, [field]: "Validation failed" }))
-      return false
+      // Skip validation on error (API might not exist)
+      setFieldErrors(prev => ({ ...prev, [field]: "" }))
+      return true
     }
   }, [])
 

@@ -78,19 +78,25 @@ export function NotificationBell() {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
+        <button
+          className="w-12 h-12 rounded-xl flex items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors relative"
+          title={unreadCount > 0 ? `${unreadCount} новых уведомлений` : "Уведомления"}
+        >
+          <Bell className="h-6 w-6" />
           {unreadCount > 0 && (
-            <Badge
-              variant="destructive"
-              className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
-            >
-              {unreadCount > 9 ? "9+" : unreadCount}
-            </Badge>
+            <>
+              <Badge
+                variant="destructive"
+                className="absolute -top-1 -right-1 h-5 min-w-5 px-1 flex items-center justify-center text-[10px] font-bold shadow-lg animate-pulse border-2 border-background"
+              >
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </Badge>
+              <span className="absolute -top-0.5 -right-0.5 h-3 w-3 bg-red-500 rounded-full animate-ping" />
+            </>
           )}
-        </Button>
+        </button>
       </PopoverTrigger>
-      <PopoverContent className="w-96 p-0 dark:bg-[#181818]" align="end">
+      <PopoverContent className="w-96 p-0 dark:bg-[#181818]" align="end" side="right">
         <NotificationList
           userId={userId}
           onNotificationsRead={handleNotificationsRead}

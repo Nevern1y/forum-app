@@ -16,6 +16,36 @@ interface MediaGalleryProps {
 export function MediaGallery({ images, className, compact = false }: MediaGalleryProps) {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
 
+  const goToPrevious = () => {
+    if (selectedIndex !== null && selectedIndex > 0) {
+      setSelectedIndex(selectedIndex - 1)
+    }
+  }
+
+  const goToNext = () => {
+    if (selectedIndex !== null && selectedIndex < images.length - 1) {
+      setSelectedIndex(selectedIndex + 1)
+    }
+  }
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (selectedIndex === null) return
+
+      if (e.key === 'Escape') {
+        setSelectedIndex(null)
+      } else if (e.key === 'ArrowLeft') {
+        goToPrevious()
+      } else if (e.key === 'ArrowRight') {
+        goToNext()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [selectedIndex, goToPrevious, goToNext])
+
   if (images.length === 0) return null
 
   // In compact mode, show max 3 images
@@ -28,36 +58,6 @@ export function MediaGallery({ images, className, compact = false }: MediaGaller
 
   const closeLightbox = () => {
     setSelectedIndex(null)
-  }
-
-  // Keyboard navigation
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (selectedIndex === null) return
-
-      if (e.key === 'Escape') {
-        closeLightbox()
-      } else if (e.key === 'ArrowLeft') {
-        goToPrevious()
-      } else if (e.key === 'ArrowRight') {
-        goToNext()
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [selectedIndex])
-
-  const goToPrevious = () => {
-    if (selectedIndex !== null && selectedIndex > 0) {
-      setSelectedIndex(selectedIndex - 1)
-    }
-  }
-
-  const goToNext = () => {
-    if (selectedIndex !== null && selectedIndex < images.length - 1) {
-      setSelectedIndex(selectedIndex + 1)
-    }
   }
 
   const downloadImage = () => {

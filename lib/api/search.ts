@@ -53,6 +53,11 @@ export interface SearchSuggestion {
 export async function searchPosts(filters: SearchFilters): Promise<SearchResult[]> {
   const supabase = createClient()
   
+  console.log('[Search] Calling search_posts with:', {
+    search_query: filters.query || '',
+    sort_by: filters.sortBy || 'relevance',
+  })
+  
   const { data, error } = await supabase.rpc('search_posts', {
     search_query: filters.query || '',
     tag_filter: filters.tag || null,
@@ -65,10 +70,57 @@ export async function searchPosts(filters: SearchFilters): Promise<SearchResult[
   })
   
   if (error) {
-    console.error('[Search] Error searching posts:', error)
-    throw new Error(error.message)
+    console.error('[Search] RPC Error:', error)
+    console.error('[Search] Error details:', JSON.stringify(error, null, 2))
+    
+    // Fallback: простой запрос без RPC
+    console.log('[Search] Trying fallback search...')
+    const { data: fallbackData, error: fallbackError } = await supabase
+      .from('posts')
+      .select(`
+        id,
+        title,
+        content,
+        author_id,
+        views,
+        created_at,
+        profiles:author_id (
+          username,
+          display_name,
+          avatar_url
+        )
+      `)
+      .ilike('title', `%${filters.query}%`)
+      .limit(filters.pageSize || 20)
+      .order('created_at', { ascending: false })
+    
+    if (fallbackError) {
+      console.error('[Search] Fallback error:', fallbackError)
+      return []
+    }
+    
+    console.log('[Search] Fallback returned:', fallbackData?.length, 'results')
+    
+    // Transform fallback data
+    return (fallbackData || []).map((post: any) => ({
+      id: post.id,
+      title: post.title,
+      content: post.content.substring(0, 300),
+      author_id: post.author_id,
+      views: post.views || 0,
+      likes: 0,
+      dislikes: 0,
+      comment_count: 0,
+      created_at: post.created_at,
+      author_username: post.profiles?.username || 'unknown',
+      author_display_name: post.profiles?.display_name || null,
+      author_avatar_url: post.profiles?.avatar_url || null,
+      tags: [],
+      rank: 1
+    }))
   }
   
+  console.log('[Search] RPC returned:', data?.length, 'results')
   return data as SearchResult[]
 }
 

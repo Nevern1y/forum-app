@@ -21,11 +21,21 @@ export function VoiceRecorder({ onUpload, existingAudio, bucket = "post-images",
   const [uploading, setUploading] = useState(false)
   const [duration, setDuration] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
+  const [isSupported, setIsSupported] = useState(true)
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
+
+  useEffect(() => {
+    // Проверка поддержки API при монтировании
+    if (typeof window !== 'undefined') {
+      const supported = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)
+      const isSecure = window.location.protocol === 'https:' || window.location.hostname === 'localhost'
+      setIsSupported(supported && isSecure)
+    }
+  }, [])
 
   useEffect(() => {
     return () => {
@@ -36,6 +46,22 @@ export function VoiceRecorder({ onUpload, existingAudio, bucket = "post-images",
 
   const startRecording = async () => {
     try {
+      // Проверка поддержки API
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        toast.error("Ваш браузер не поддерживает запись аудио", {
+          description: "Попробуйте использовать современный браузер (Chrome, Firefox, Safari) или убедитесь что сайт открыт по HTTPS"
+        })
+        return
+      }
+
+      // Проверка безопасного контекста (HTTPS или localhost)
+      if (typeof window !== 'undefined' && window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+        toast.error("Запись аудио доступна только по HTTPS", {
+          description: "Для записи голосовых сообщений необходимо безопасное соединение"
+        })
+        return
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       const mediaRecorder = new MediaRecorder(stream)
       mediaRecorderRef.current = mediaRecorder
@@ -65,9 +91,27 @@ export function VoiceRecorder({ onUpload, existingAudio, bucket = "post-images",
       }, 1000)
 
       toast.success("Запись началась")
-    } catch (error) {
+    } catch (error: any) {
       console.error("Recording error:", error)
-      toast.error("Не удалось получить доступ к микрофону")
+      
+      // Детальные сообщения об ошибках
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        toast.error("Доступ к микрофону запрещен", {
+          description: "Разрешите доступ к микрофону в настройках браузера"
+        })
+      } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+        toast.error("Микрофон не найден", {
+          description: "Подключите микрофон к устройству"
+        })
+      } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+        toast.error("Микрофон уже используется", {
+          description: "Закройте другие приложения, использующие микрофон"
+        })
+      } else {
+        toast.error("Не удалось получить доступ к микрофону", {
+          description: error.message || "Попробуйте перезагрузить страницу"
+        })
+      }
     }
   }
 
@@ -166,25 +210,37 @@ export function VoiceRecorder({ onUpload, existingAudio, bucket = "post-images",
         </div>
 
         {!audioUrl ? (
-          <div className="flex gap-2">
-            {!isRecording ? (
-              <>
-                <Button type="button" onClick={startRecording} className="flex-1">
-                  <Mic className="h-4 w-4 mr-2" />
-                  Начать запись
-                </Button>
-                {onCancel && (
-                  <Button type="button" onClick={onCancel} variant="ghost">
-                    Отмена
-                  </Button>
-                )}
-              </>
-            ) : (
-              <Button type="button" onClick={stopRecording} variant="destructive" className="flex-1">
-                <Square className="h-4 w-4 mr-2" />
-                Остановить
-              </Button>
+          <div className="space-y-2">
+            {!isSupported && (
+              <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
+                ⚠️ Запись аудио недоступна. Используйте HTTPS или современный браузер.
+              </div>
             )}
+            <div className="flex gap-2">
+              {!isRecording ? (
+                <>
+                  <Button 
+                    type="button" 
+                    onClick={startRecording} 
+                    className="flex-1"
+                    disabled={!isSupported}
+                  >
+                    <Mic className="h-4 w-4 mr-2" />
+                    Начать запись
+                  </Button>
+                  {onCancel && (
+                    <Button type="button" onClick={onCancel} variant="ghost">
+                      Отмена
+                    </Button>
+                  )}
+                </>
+              ) : (
+                <Button type="button" onClick={stopRecording} variant="destructive" className="flex-1">
+                  <Square className="h-4 w-4 mr-2" />
+                  Остановить
+                </Button>
+              )}
+            </div>
           </div>
         ) : (
           <div className="space-y-3">

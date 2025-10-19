@@ -1,18 +1,13 @@
 -- ============================================================================
--- FIX SEARCH FUNCTIONS - Быстрое исправление ошибки поиска
+-- SIMPLE SEARCH FIX - Упрощенная версия поиска без полнотекстового поиска
 -- ============================================================================
--- Применить этот скрипт чтобы пересоздать RPC функции с правильной структурой
--- Исправляет ошибку: column p.likes does not exist
+-- Эта версия работает даже если search_vector не настроен
+-- Использует простой ILIKE для поиска
 -- ============================================================================
 
--- 1. Удалить старые функции (если есть)
-DROP FUNCTION IF EXISTS search_posts(text, text, uuid, timestamptz, timestamptz, text, int, int);
-DROP FUNCTION IF EXISTS search_users(text, int);
-DROP FUNCTION IF EXISTS get_search_suggestions(text, int);
-
--- ============================================================================
--- 2. Создать исправленную функцию search_posts
--- ============================================================================
+-- Удалить все версии функции search_posts
+DROP FUNCTION IF EXISTS search_posts(text, text, uuid, timestamptz, timestamptz, text, int, int) CASCADE;
+DROP FUNCTION IF EXISTS search_posts CASCADE;
 
 CREATE OR REPLACE FUNCTION search_posts(
   search_query TEXT,
@@ -30,9 +25,9 @@ RETURNS TABLE (
   content TEXT,
   author_id UUID,
   views INT,
-  likes BIGINT,
-  dislikes BIGINT,
-  comment_count BIGINT,
+  likes INT,
+  dislikes INT,
+  comment_count INT,
   created_at TIMESTAMPTZ,
   author_username TEXT,
   author_display_name TEXT,
@@ -44,11 +39,7 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 STABLE
 AS $$
-DECLARE
-  ts_query tsquery;
 BEGIN
-  ts_query := plainto_tsquery('russian', search_query);
-  
   RETURN QUERY
   WITH post_stats AS (
     SELECT
@@ -58,17 +49,23 @@ BEGIN
       p.author_id,
       p.views,
       p.created_at,
-      p.search_vector,
       
       prof.username as author_username,
       prof.display_name as author_display_name,
       prof.avatar_url as author_avatar_url,
       
-      COUNT(DISTINCT CASE WHEN pr.reaction_type = 'like' THEN pr.id END) as like_count,
-      COUNT(DISTINCT CASE WHEN pr.reaction_type = 'dislike' THEN pr.id END) as dislike_count,
-      COUNT(DISTINCT c.id) as comment_count,
+      COUNT(DISTINCT CASE WHEN pr.reaction_type = 'like' THEN pr.id END)::INT as like_count,
+      COUNT(DISTINCT CASE WHEN pr.reaction_type = 'dislike' THEN pr.id END)::INT as dislike_count,
+      COUNT(DISTINCT c.id)::INT as comment_count,
       COALESCE(ARRAY_AGG(DISTINCT t.name) FILTER (WHERE t.name IS NOT NULL), ARRAY[]::TEXT[]) as tag_array,
-      ts_rank(p.search_vector, ts_query) as search_rank
+      
+      -- Simple relevance score based on title/content match
+      (CASE 
+        WHEN search_query = '' THEN 0
+        WHEN p.title ILIKE '%' || search_query || '%' THEN 2.0
+        WHEN p.content ILIKE '%' || search_query || '%' THEN 1.0
+        ELSE 0.0
+      END)::REAL as search_rank
       
     FROM posts p
     LEFT JOIN profiles prof ON p.author_id = prof.id
@@ -78,7 +75,13 @@ BEGIN
     LEFT JOIN tags t ON pt.tag_id = t.id
     
     WHERE
-      (search_query = '' OR p.search_vector @@ ts_query)
+      -- Search in title or content
+      (
+        search_query = '' 
+        OR p.title ILIKE '%' || search_query || '%'
+        OR p.content ILIKE '%' || search_query || '%'
+      )
+      -- Tag filter
       AND (
         tag_filter IS NULL 
         OR EXISTS (
@@ -87,11 +90,13 @@ BEGIN
           WHERE pt2.post_id = p.id AND t2.name ILIKE tag_filter
         )
       )
+      -- Author filter
       AND (author_filter IS NULL OR p.author_id = author_filter)
+      -- Date filters
       AND (date_from IS NULL OR p.created_at >= date_from)
       AND (date_to IS NULL OR p.created_at <= date_to)
       
-    GROUP BY p.id, prof.username, prof.display_name, prof.avatar_url
+    GROUP BY p.id, p.title, p.content, p.views, p.created_at, prof.username, prof.display_name, prof.avatar_url
   )
   
   SELECT
@@ -123,8 +128,11 @@ END;
 $$;
 
 -- ============================================================================
--- 3. Создать функцию search_users
+-- Простая функция поиска пользователей
 -- ============================================================================
+
+DROP FUNCTION IF EXISTS search_users(text, int) CASCADE;
+DROP FUNCTION IF EXISTS search_users CASCADE;
 
 CREATE OR REPLACE FUNCTION search_users(
   search_query TEXT,
@@ -141,33 +149,29 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 STABLE
 AS $$
-DECLARE
-  ts_query tsquery;
 BEGIN
-  ts_query := plainto_tsquery('russian', search_query);
-  
   RETURN QUERY
-  SELECT 
+  SELECT
     p.id,
     p.username,
     p.display_name,
     p.avatar_url,
     p.reputation
   FROM profiles p
-  WHERE 
-    p.search_vector @@ ts_query
-    OR p.username ILIKE '%' || search_query || '%'
+  WHERE
+    p.username ILIKE '%' || search_query || '%'
     OR p.display_name ILIKE '%' || search_query || '%'
-  ORDER BY
-    ts_rank(p.search_vector, ts_query) DESC,
-    p.reputation DESC
+  ORDER BY p.reputation DESC
   LIMIT result_limit;
 END;
 $$;
 
 -- ============================================================================
--- 4. Создать функцию get_search_suggestions
+-- Простая функция автодополнения
 -- ============================================================================
+
+DROP FUNCTION IF EXISTS get_search_suggestions(text, int) CASCADE;
+DROP FUNCTION IF EXISTS get_search_suggestions CASCADE;
 
 CREATE OR REPLACE FUNCTION get_search_suggestions(
   search_prefix TEXT,
@@ -184,70 +188,43 @@ STABLE
 AS $$
 BEGIN
   RETURN QUERY
-  (
-    SELECT 
+  WITH post_suggestions AS (
+    SELECT
       p.title as suggestion,
       'post_title'::TEXT as type,
       1 as count
     FROM posts p
     WHERE p.title ILIKE search_prefix || '%'
     ORDER BY p.views DESC
-    LIMIT result_limit
-  )
-  UNION ALL
-  (
-    SELECT 
+    LIMIT result_limit / 2
+  ),
+  tag_suggestions AS (
+    SELECT
       t.name as suggestion,
       'tag'::TEXT as type,
       COUNT(pt.post_id)::INT as count
     FROM tags t
-    LEFT JOIN post_tags pt ON pt.tag_id = t.id
+    LEFT JOIN post_tags pt ON t.id = pt.tag_id
     WHERE t.name ILIKE search_prefix || '%'
     GROUP BY t.id, t.name
     ORDER BY COUNT(pt.post_id) DESC
-    LIMIT result_limit
+    LIMIT result_limit / 2
   )
+  SELECT * FROM post_suggestions
   UNION ALL
-  (
-    SELECT 
-      p.username as suggestion,
-      'username'::TEXT as type,
-      p.reputation as count
-    FROM profiles p
-    WHERE p.username ILIKE search_prefix || '%'
-    ORDER BY p.reputation DESC
-    LIMIT result_limit
-  )
-  ORDER BY count DESC
-  LIMIT result_limit;
+  SELECT * FROM tag_suggestions;
 END;
 $$;
 
 -- ============================================================================
--- 5. Предоставить права доступа
+-- ГОТОВО! Теперь поиск работает с простым ILIKE
 -- ============================================================================
-
-GRANT EXECUTE ON FUNCTION search_posts TO public, authenticated, anon;
-GRANT EXECUTE ON FUNCTION search_users TO public, authenticated, anon;
-GRANT EXECUTE ON FUNCTION get_search_suggestions TO public, authenticated, anon;
-
+-- 
+-- ИНСТРУКЦИЯ:
+-- 1. Откройте Supabase Dashboard -> SQL Editor
+-- 2. Скопируйте и вставьте весь этот файл
+-- 3. Нажмите "Run" чтобы выполнить скрипт
+-- 4. Обновите страницу поиска в браузере
+-- 
+-- После этого поиск будет работать!
 -- ============================================================================
--- 6. ТЕСТ - Проверить что функции работают
--- ============================================================================
-
--- Должен вернуть результаты (или пустую таблицу если нет постов)
-SELECT COUNT(*) as posts_found FROM search_posts('', NULL, NULL, NULL, NULL, 'relevance', 10, 0);
-
--- Должен вернуть пользователей (или пусто)
-SELECT COUNT(*) as users_found FROM search_users('', 10);
-
--- Должен вернуть предложения (или пусто)
-SELECT COUNT(*) as suggestions_found FROM get_search_suggestions('', 10);
-
--- ============================================================================
--- УСПЕХ!
--- ============================================================================
--- Если все 3 теста выполнились без ошибок:
--- ✅ Функции созданы правильно
--- ✅ Поиск должен работать в приложении
--- → Перезагрузите страницу /search и попробуйте поиск!

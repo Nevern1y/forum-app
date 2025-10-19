@@ -146,8 +146,8 @@ export function SearchBarAdvanced({
   return (
     <div className={cn("relative w-full", className)}>
       {/* Input */}
-      <div className="relative group/input">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-hover/input:text-primary/70 transition-colors duration-300 pointer-events-none z-10" />
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
         
         <Input
           ref={inputRef}
@@ -158,7 +158,7 @@ export function SearchBarAdvanced({
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           autoFocus={autoFocus}
-          className="pl-10 pr-10 h-11 text-[15px] border border-border hover:border-primary/30 focus-visible:border-primary/50 focus-visible:ring-2 focus-visible:ring-primary/10 transition-all duration-300"
+          className="pl-10 pr-10 h-12 text-base border-2 focus-visible:ring-0 transition-colors"
         />
 
         {query && (
@@ -167,7 +167,7 @@ export function SearchBarAdvanced({
               setQuery("")
               inputRef.current?.focus()
             }}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
           >
             <X className="h-4 w-4" />
           </button>
@@ -178,43 +178,32 @@ export function SearchBarAdvanced({
       {(showHistory || showSuggestions) && (
         <div
           ref={dropdownRef}
-          className="absolute top-full mt-2 w-full bg-background border border-border rounded-xl shadow-2xl overflow-hidden z-[100] pointer-events-auto animate-in fade-in slide-in-from-top-2 duration-200"
-          style={{ isolation: 'isolate', backgroundColor: 'hsl(var(--background))' }}
+          className="absolute top-full mt-2 w-full bg-background border rounded-lg shadow-lg overflow-hidden z-[100]"
         >
           {/* History */}
           {showHistory && (
-            <div className="py-2">
-              <div className="flex items-center justify-between px-4 py-2 mb-1">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-xs font-semibold text-foreground">Недавние поиски</span>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
+            <div className="p-2">
+              <div className="flex items-center justify-between px-2 py-1 mb-1">
+                <span className="text-xs text-muted-foreground">Недавние</span>
+                <button
                   onClick={handleClearHistory}
-                  className="h-7 text-xs px-2 hover:bg-destructive/10 hover:text-destructive rounded-md"
+                  className="text-xs text-muted-foreground hover:text-foreground"
                 >
                   Очистить
-                </Button>
+                </button>
               </div>
-              <div className="space-y-0.5 px-2">
+              <div className="space-y-0.5">
                 {history.slice(0, 5).map((item, index) => (
                   <button
                     key={index}
                     onClick={() => handleSuggestionClick(item)}
                     className={cn(
-                      "w-full flex items-center gap-3 px-3 py-2.5 text-left rounded-lg transition-all duration-200 group",
-                      selectedIndex === index 
-                        ? "bg-primary/10 text-foreground" 
-                        : "hover:bg-accent/50 text-foreground"
+                      "w-full flex items-center gap-2 px-2 py-1.5 text-sm text-left rounded hover:bg-accent transition-colors",
+                      selectedIndex === index && "bg-accent"
                     )}
                   >
-                    <div className="p-1.5 rounded-md bg-muted/50 group-hover:bg-muted transition-colors">
-                      <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                    </div>
-                    <span className="text-sm flex-1 truncate font-medium">{item}</span>
-                    <Search className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <Clock className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                    <span className="flex-1 truncate">{item}</span>
                   </button>
                 ))}
               </div>
@@ -223,21 +212,20 @@ export function SearchBarAdvanced({
 
           {/* Separator */}
           {showHistory && showSuggestions && (
-            <div className="border-t border-border/50 my-1" />
+            <div className="border-t" />
           )}
 
           {/* Suggestions */}
           {showSuggestions && (
-            <div className="py-2">
+            <div className="p-2">
               {query.length >= 2 && (
-                <div className="flex items-center gap-2 px-4 py-2 mb-1">
-                  <TrendingUp className="h-3.5 w-3.5 text-primary" />
-                  <span className="text-xs font-semibold text-foreground">
+                <div className="px-2 py-1 mb-1">
+                  <span className="text-xs text-muted-foreground">
                     {loading ? "Загрузка..." : "Предложения"}
                   </span>
                 </div>
               )}
-              <div className="space-y-0.5 px-2">
+              <div className="space-y-0.5">
                 {suggestions.map((item, index) => {
                   const absoluteIndex = history.length + index
                   return (
@@ -245,18 +233,14 @@ export function SearchBarAdvanced({
                       key={index}
                       onClick={() => handleSuggestionClick(item.suggestion)}
                       className={cn(
-                        "w-full flex items-center gap-3 px-3 py-2.5 text-left rounded-lg transition-all duration-200 group",
-                        selectedIndex === absoluteIndex 
-                          ? "bg-primary/10 text-foreground" 
-                          : "hover:bg-accent/50 text-foreground"
+                        "w-full flex items-center gap-2 px-2 py-1.5 text-sm text-left rounded hover:bg-accent transition-colors",
+                        selectedIndex === absoluteIndex && "bg-accent"
                       )}
                     >
-                      <div className="p-1.5 rounded-md bg-muted/50 group-hover:bg-muted transition-colors">
-                        {getIcon(item.type)}
-                      </div>
-                      <span className="text-sm flex-1 truncate font-medium">{item.suggestion}</span>
+                      {getIcon(item.type)}
+                      <span className="flex-1 truncate">{item.suggestion}</span>
                       {item.count > 0 && (
-                        <span className="text-xs font-semibold text-primary bg-primary/10 px-2 py-1 rounded-md tabular-nums">
+                        <span className="text-xs text-muted-foreground">
                           {item.count}
                         </span>
                       )}
