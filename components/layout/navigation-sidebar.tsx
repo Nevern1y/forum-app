@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { Home, Search, Heart, User, MoreHorizontal, Palette, Settings, Bookmark, Flag, LogOut, List, MessageCircle, Users } from "lucide-react"
+import { Home, Search, User, MoreHorizontal, Settings, Bookmark, Flag, LogOut, List, MessageCircle, Users, Heart, Sparkles } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,10 +32,16 @@ export function NavigationSidebar({ username }: NavigationSidebarProps) {
 
   const navItems = [
     { href: "/feed", icon: Home, label: "Главная" },
-    { href: "/following", icon: Users, label: "Подписки" },
+    { href: "/messages", icon: MessageCircle, label: "Сообщения" },
     { href: "/search", icon: Search, label: "Поиск" },
-    { href: "/liked-posts", icon: Heart, label: "Понравившееся" },
     { href: `/profile/${username}`, icon: User, label: "Профиль" },
+  ]
+  
+  const forYouItems = [
+    { href: "/following", icon: Users, label: "Подписки", description: "Посты от ваших подписок" },
+    { href: "/liked-posts", icon: Heart, label: "Понравившееся", description: "Посты которым вы поставили лайк" },
+    { href: "/bookmarks", icon: Bookmark, label: "Сохраненное", description: "Закладки для чтения потом" },
+    { href: "/feed?sort=following", icon: List, label: "Ленты", description: "Различные варианты лент" },
   ]
 
   return (
@@ -48,7 +54,7 @@ export function NavigationSidebar({ username }: NavigationSidebarProps) {
               key={item.href}
               href={item.href}
               className={cn(
-                "w-12 h-12 rounded-xl flex items-center justify-center transition-colors",
+                "w-12 h-12 rounded-xl flex items-center justify-center transition-colors relative",
                 isActive 
                   ? "bg-primary text-primary-foreground" 
                   : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
@@ -59,6 +65,53 @@ export function NavigationSidebar({ username }: NavigationSidebarProps) {
             </Link>
           )
         })}
+        
+        {/* Для вас - Dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              className={cn(
+                "w-12 h-12 rounded-xl flex items-center justify-center transition-colors relative group",
+                (pathname === "/following" || pathname === "/liked-posts" || pathname === "/bookmarks")
+                  ? "bg-primary/10 text-primary" 
+                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+              )}
+              title="Для вас"
+            >
+              <Sparkles className="h-6 w-6" />
+              {(pathname === "/following" || pathname === "/liked-posts" || pathname === "/bookmarks") && (
+                <span className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full" />
+              )}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" side="right" className="w-72 ml-2">
+            <div className="px-3 py-2 border-b border-border">
+              <p className="text-sm font-semibold flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-primary" />
+                Для вас
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">Персонализированные разделы</p>
+            </div>
+            
+            {forYouItems.map((item) => (
+              <DropdownMenuItem key={item.href} asChild>
+                <Link 
+                  href={item.href} 
+                  className={cn(
+                    "cursor-pointer flex items-start gap-3 py-3",
+                    pathname === item.href && "bg-accent"
+                  )}
+                >
+                  <item.icon className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">{item.label}</p>
+                    <p className="text-xs text-muted-foreground line-clamp-1">{item.description}</p>
+                  </div>
+                </Link>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </nav>
 
       <div className="flex flex-col items-center gap-3">
@@ -80,29 +133,6 @@ export function NavigationSidebar({ username }: NavigationSidebarProps) {
             <Link href="/settings/profile" className="cursor-pointer flex items-center">
               <Settings className="h-4 w-4 mr-3" />
               Настройки
-            </Link>
-          </DropdownMenuItem>
-
-          <DropdownMenuSeparator />
-
-          <DropdownMenuItem asChild>
-            <Link href="/feed?sort=following" className="cursor-pointer flex items-center">
-              <List className="h-4 w-4 mr-3" />
-              Ленты
-            </Link>
-          </DropdownMenuItem>
-
-          <DropdownMenuItem asChild>
-            <Link href="/bookmarks" className="cursor-pointer flex items-center">
-              <Bookmark className="h-4 w-4 mr-3" />
-              Сохраненное
-            </Link>
-          </DropdownMenuItem>
-
-          <DropdownMenuItem asChild>
-            <Link href="/liked-posts" className="cursor-pointer flex items-center">
-              <Heart className="h-4 w-4 mr-3" />
-              Вы поставили нравится
             </Link>
           </DropdownMenuItem>
 
