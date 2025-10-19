@@ -153,12 +153,34 @@ export function useRealtime<T = unknown>({
         } else if (status === "CHANNEL_ERROR") {
           isSubscribedRef.current = false
           
-          // Логируем ошибку только один раз или в dev режиме
-          if (retryCountRef.current === 0 || process.env.NODE_ENV === 'development') {
-            console.error(`❌ [Realtime ${table}] Channel error:`, err?.message || 'Unknown error')
+          const errorMessage = err?.message || ''
+          
+          // Детектируем специфичную проблему "mismatch"
+          if (errorMessage.includes('mismatch between server and client bindings')) {
+            // Это известная проблема - replica_identity='full' вместо 'default'
+            // Логируем ОДИН раз с понятной инструкцией
+            if (retryCountRef.current === 0) {
+              console.error(
+                `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+                `❌ REALTIME ERROR: Table "${table}" is misconfigured\n` +
+                `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+                `PROBLEM: replica_identity is set to 'full' instead of 'default'\n\n` +
+                `FIX: Run this SQL in Supabase SQL Editor:\n\n` +
+                `  ALTER TABLE ${table} REPLICA IDENTITY DEFAULT;\n\n` +
+                `Then restart: npm run dev\n\n` +
+                `For all tables, run: FIX_ALL_REPLICA_IDENTITY.sql\n` +
+                `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`
+              )
+            }
+            // НЕ пытаемся реконнектиться - это не поможет
+            return
           }
           
-          // Пытаемся реконнектиться
+          // Для других ошибок логируем и пытаемся реконнектиться
+          if (retryCountRef.current === 0 || process.env.NODE_ENV === 'development') {
+            console.error(`❌ [Realtime ${table}] Error:`, errorMessage)
+          }
+          
           attemptReconnect(channel, 'channel_error')
         } else if (status === "TIMED_OUT") {
           isSubscribedRef.current = false
