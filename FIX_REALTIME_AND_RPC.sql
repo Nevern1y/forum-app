@@ -22,8 +22,15 @@ $$;
 GRANT EXECUTE ON FUNCTION increment_post_views(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION increment_post_views(uuid) TO anon;
 
--- 2. Включение Realtime для post_reactions
-ALTER PUBLICATION supabase_realtime ADD TABLE post_reactions;
+-- 2. Включение Realtime для post_reactions (игнорируем если уже добавлена)
+DO $$
+BEGIN
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE post_reactions;
+  EXCEPTION WHEN duplicate_object THEN
+    NULL; -- Таблица уже в публикации, всё ОК
+  END;
+END $$;
 
 -- 3. RLS политики для post_reactions
 DROP POLICY IF EXISTS "Public can view reactions" ON post_reactions;
@@ -34,8 +41,15 @@ DROP POLICY IF EXISTS "Users can manage their reactions" ON post_reactions;
 CREATE POLICY "Users can manage their reactions" ON post_reactions
 FOR ALL USING (auth.uid() = user_id);
 
--- 4. Включение Realtime для notifications
-ALTER PUBLICATION supabase_realtime ADD TABLE notifications;
+-- 4. Включение Realtime для notifications (игнорируем если уже добавлена)
+DO $$
+BEGIN
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE notifications;
+  EXCEPTION WHEN duplicate_object THEN
+    NULL; -- Таблица уже в публикации, всё ОК
+  END;
+END $$;
 
 -- 5. RLS для notifications
 DROP POLICY IF EXISTS "Users can view their notifications" ON notifications;
