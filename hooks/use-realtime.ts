@@ -2,14 +2,22 @@
 
 import { useEffect, useRef } from "react"
 import { createClient } from "@/lib/supabase/client"
-import type { RealtimeChannel } from "@supabase/supabase-js"
-import type { RealtimePayload } from "@/lib/types"
+import type { RealtimeChannel, REALTIME_POSTGRES_CHANGES_LISTEN_EVENT } from "@supabase/supabase-js"
 
-export type RealtimeEvent = "INSERT" | "UPDATE" | "DELETE"
+export type RealtimeEvent = "INSERT" | "UPDATE" | "DELETE" | "*"
+
+interface RealtimePayload<T> {
+  eventType: "INSERT" | "UPDATE" | "DELETE"
+  new: T
+  old: T
+  schema: string
+  table: string
+  commit_timestamp: string
+}
 
 interface UseRealtimeOptions<T = unknown> {
   table: string
-  event?: RealtimeEvent | "*"
+  event?: RealtimeEvent
   filter?: string
   onInsert?: (payload: T) => void
   onUpdate?: (payload: { old: T; new: T }) => void
@@ -32,7 +40,7 @@ export function useRealtime<T = unknown>({
   const channelRef = useRef<RealtimeChannel | null>(null)
   const retryCountRef = useRef(0)
   const maxRetries = 5
-  const baseDelay = 1000 // 1 second
+  const baseDelay = 1000
 
   const attemptReconnect = (channel: RealtimeChannel) => {
     if (retryCountRef.current >= maxRetries) {
@@ -41,7 +49,6 @@ export function useRealtime<T = unknown>({
     }
 
     retryCountRef.current++
-    // Exponential backoff with jitter: baseDelay * 2^(attempt-1) + random jitter
     const delay = baseDelay * Math.pow(2, retryCountRef.current - 1) + Math.random() * 1000
 
     console.log(`🔄 [Realtime ${table}] Attempting to reconnect in ${Math.round(delay)}ms (attempt ${retryCountRef.current}/${maxRetries})`)
@@ -57,61 +64,69 @@ export function useRealtime<T = unknown>({
     const supabase = createClient()
 
     // Создаем уникальное имя канала
-    const channelName = `realtime:${table}:${Date.now()}`
+    const channelName = `${table}:${Date.now()}`
     const channel = supabase.channel(channelName)
 
-    // Настраиваем слушатель с правильной конфигурацией
-    // Используем правильный формат для Supabase Realtime
-    const changeConfig = {
-      event,
+    // Правильная конфигурация для Supabase Realtime v2
+    const config: {
+      event: REALTIME_POSTGRES_CHANGES_LISTEN_EVENT["postgres_changes"]
+      schema: string
+      table: string
+      filter?: string
+    } = {
+      event: event as any,
       schema: "public",
       table: table,
-      ...(filter && { filter }),
     }
-    
-    let subscription = channel.on(
-      "postgres_changes",
-      changeConfig,
-      (payload: RealtimePayload<T>) => {
-        console.log(`[Realtime ${table}] Change received:`, payload.eventType)
 
-        // Вызываем соответствующий обработчик
-        switch (payload.eventType) {
-          case "INSERT":
-            onInsert?.(payload.new as T)
-            onChange?.(payload)
-            break
-          case "UPDATE":
-            onUpdate?.({ old: payload.old as T, new: payload.new as T })
-            onChange?.(payload)
-            break
-          case "DELETE":
-            onDelete?.(payload.old as T)
-            onChange?.(payload)
-            break
+    // Добавляем фильтр только если он указан
+    if (filter) {
+      config.filter = filter
+    }
+
+    // Подписываемся на изменения
+    channel
+      .on(
+        "postgres_changes" as any,
+        config as any,
+        (payload: any) => {
+          console.log(`[Realtime ${table}] Change received:`, payload.eventType)
+
+          // Вызываем соответствующий обработчик
+          switch (payload.eventType) {
+            case "INSERT":
+              onInsert?.(payload.new as T)
+              onChange?.(payload as RealtimePayload<T>)
+              break
+            case "UPDATE":
+              onUpdate?.({ old: payload.old as T, new: payload.new as T })
+              onChange?.(payload as RealtimePayload<T>)
+              break
+            case "DELETE":
+              onDelete?.(payload.old as T)
+              onChange?.(payload as RealtimePayload<T>)
+              break
+          }
         }
-      }
-    )
+      )
+      .subscribe((status, err) => {
+        console.log(`[Realtime ${table}] Status:`, status)
 
-    // Подписываемся с обработкой ошибок и повторными попытками
-    subscription.subscribe((status, err) => {
-      console.log(`[Realtime ${table}] Status:`, status)
-
-      if (status === "SUBSCRIBED") {
-        console.log(`✅ [Realtime ${table}] Successfully subscribed`)
-        retryCountRef.current = 0 // Reset retry count on successful connection
-      } else if (status === "CHANNEL_ERROR") {
-        console.error(`❌ [Realtime ${table}] Channel error:`, err)
-        console.error(`Check if realtime is enabled for ${table} in Supabase Dashboard`)
-        attemptReconnect(channel)
-      } else if (status === "TIMED_OUT") {
-        console.error(`⏱️ [Realtime ${table}] Connection timed out`)
-        attemptReconnect(channel)
-      } else if (status === "CLOSED") {
-        console.warn(`🔌 [Realtime ${table}] Connection closed`)
-        attemptReconnect(channel)
-      }
-    })
+        if (status === "SUBSCRIBED") {
+          console.log(`✅ [Realtime ${table}] Successfully subscribed`)
+          retryCountRef.current = 0
+        } else if (status === "CHANNEL_ERROR") {
+          console.error(`❌ [Realtime ${table}] Channel error:`, err)
+          console.error(`Check if realtime is enabled for ${table} in Supabase Dashboard`)
+          attemptReconnect(channel)
+        } else if (status === "TIMED_OUT") {
+          console.error(`⏱️ [Realtime ${table}] Connection timed out`)
+          attemptReconnect(channel)
+        } else if (status === "CLOSED") {
+          console.warn(`🔌 [Realtime ${table}] Connection closed`)
+          attemptReconnect(channel)
+        }
+      })
 
     channelRef.current = channel
 
@@ -123,7 +138,7 @@ export function useRealtime<T = unknown>({
       }
       retryCountRef.current = 0
     }
-  }, [table, event, filter])
+  }, [table, event, filter, onInsert, onUpdate, onDelete, onChange])
 
   return channelRef.current
 }
