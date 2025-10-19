@@ -61,28 +61,17 @@ export function useRealtime<T = unknown>({
     const channel = supabase.channel(channelName)
 
     // Настраиваем слушатель с правильной конфигурацией
-    // Для Supabase Realtime v2, event должно быть одним из: INSERT | UPDATE | DELETE | *
-    const eventType = event === "*" ? "*" : event
-    
-    const config: {
-      event: string
-      schema: string
-      table: string
-      filter?: string
-    } = {
-      event: eventType,
+    // Используем правильный формат для Supabase Realtime
+    const changeConfig = {
+      event,
       schema: "public",
       table: table,
-    }
-    
-    // Добавляем фильтр только если он указан
-    if (filter) {
-      config.filter = filter
+      ...(filter && { filter }),
     }
     
     let subscription = channel.on(
-      "postgres_changes" as any,
-      config as any,
+      "postgres_changes",
+      changeConfig,
       (payload: RealtimePayload<T>) => {
         console.log(`[Realtime ${table}] Change received:`, payload.eventType)
 
