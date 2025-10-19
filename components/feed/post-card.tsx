@@ -192,22 +192,21 @@ const PostCardComponent = ({ post }: PostCardProps) => {
         
         if (error) throw error
       } else {
-        // Удаляем старую реакцию (если была) и добавляем новую
-        if (previousReaction) {
-          await supabase
-            .from('post_reactions')
-            .delete()
-            .eq('post_id', post.id)
-            .eq('user_id', user.id)
-        }
-        
+        // Используем UPSERT для атомарной операции
+        // Это автоматически заменит старую реакцию на новую
         const { error } = await supabase
           .from('post_reactions')
-          .insert({ 
-            post_id: post.id, 
-            user_id: user.id,
-            reaction_type: reactionType
-          })
+          .upsert(
+            { 
+              post_id: post.id, 
+              user_id: user.id,
+              reaction_type: reactionType
+            },
+            {
+              onConflict: 'post_id,user_id',
+              ignoreDuplicates: false
+            }
+          )
         
         if (error) throw error
       }
