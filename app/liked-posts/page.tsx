@@ -60,8 +60,6 @@ export default async function LikedPostsPage() {
                 <PostCard
                   key={post.id}
                   post={post}
-                  currentUserId={user.id}
-                  showActions
                 />
               ))}
             </div>

@@ -11,7 +11,7 @@ export interface UserPresence {
  */
 export function subscribeToUserPresence(
   userId: string,
-  onPresenceChange: (presence: any) => void
+  onPresenceChange: (presence: UserPresence[]) => void
 ) {
   const supabase = createClient()
 
@@ -19,7 +19,7 @@ export function subscribeToUserPresence(
     .channel(`presence:${userId}`)
     .on("presence", { event: "sync" }, () => {
       const state = channel.presenceState()
-      const users = Object.values(state).flat()
+      const users = Object.values(state).flat() as unknown as UserPresence[]
       onPresenceChange(users)
     })
     .subscribe()
@@ -77,7 +77,7 @@ export function subscribeToOnlineUsers(onUsersChange: (users: string[]) => void)
     .on("presence", { event: "sync" }, () => {
       const state = channel.presenceState()
       const userIds = Object.keys(state).map((key) => {
-        const presences = state[key] as any[]
+        const presences = state[key] as unknown as Array<{ user_id: string }>
         return presences[0]?.user_id
       }).filter(Boolean)
       

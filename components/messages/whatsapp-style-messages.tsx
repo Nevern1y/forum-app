@@ -141,6 +141,7 @@ export function WhatsAppStyleMessages({ userId, currentUser }: WhatsAppStyleMess
         lastMessage: null,
         lastMessageAt: null,
         unreadCount: 0,
+        lastMessageData: null,
       })),
   ].sort((a, b) => {
     if (!a.lastMessageAt) return 1

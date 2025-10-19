@@ -9,26 +9,7 @@ import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { usePostsRealtime } from "@/hooks/use-posts-realtime"
 import { toast } from "sonner"
-
-interface Post {
-  id: string
-  title: string
-  content: string
-  views: number
-  likes: number
-  created_at: string
-  profiles: {
-    username: string
-    display_name: string | null
-    avatar_url: string | null
-    reputation: number
-  } | null
-  post_tags: Array<{
-    tags: {
-      name: string
-    } | null
-  }>
-}
+import type { Post } from "@/lib/types"
 
 interface InfinitePostListProps {
   initialPosts: Post[]
@@ -255,6 +236,7 @@ export function InfinitePostList({ initialPosts, sortBy }: InfinitePostListProps
         >
           {virtualItems.map((virtualItem) => {
             const post = posts[virtualItem.index]
+            if (!post) return null
             return (
               <div
                 key={post.id}
@@ -293,7 +275,7 @@ export function InfinitePostList({ initialPosts, sortBy }: InfinitePostListProps
         <div className="flex justify-center pt-4">
           <Button
             variant="outline"
-            onClick={loadMorePosts}
+            onClick={() => loadMorePosts()}
             disabled={isLoading}
           >
             {isLoading ? (

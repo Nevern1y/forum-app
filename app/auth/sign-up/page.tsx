@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useState, useCallback } from "react"
 
 export default function SignUpPage() {
   const [email, setEmail] = useState("")
@@ -18,27 +18,61 @@ export default function SignUpPage() {
   const [repeatPassword, setRepeatPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [fieldErrors, setFieldErrors] = useState<{[key: string]: string}>({})
   const router = useRouter()
+
+  const validateField = useCallback(async (field: string, value: string) => {
+    try {
+      const response = await fetch(`/api/auth/validate-${field}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ [field]: value }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        setFieldErrors(prev => ({ ...prev, [field]: data.error }))
+        return false
+      }
+
+      setFieldErrors(prev => ({ ...prev, [field]: "" }))
+      return true
+    } catch (error) {
+      console.error(`Error validating ${field}:`, error)
+      setFieldErrors(prev => ({ ...prev, [field]: "Validation failed" }))
+      return false
+    }
+  }, [])
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
-    const supabase = createClient()
     setIsLoading(true)
     setError(null)
+    setFieldErrors({})
 
+    // Client-side validation
     if (password !== repeatPassword) {
       setError("Пароли не совпадают")
       setIsLoading(false)
       return
     }
 
-    if (username.length < 3) {
-      setError("Имя пользователя должно быть не менее 3 символов")
+    // Server-side validation
+    const [usernameValid, emailValid] = await Promise.all([
+      validateField("username", username),
+      validateField("email", email),
+    ])
+
+    if (!usernameValid || !emailValid) {
       setIsLoading(false)
       return
     }
 
     try {
+      const supabase = createClient()
       const { error } = await supabase.auth.signUp({
         email,
         password,
@@ -54,7 +88,31 @@ export default function SignUpPage() {
       router.push("/feed")
       router.refresh()
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "An error occurred")
+      let errorMessage = "Произошла ошибка при регистрации. Попробуйте еще раз."
+
+      if (error instanceof Error) {
+        // Map specific Supabase auth errors to user-friendly messages
+        switch (error.message) {
+          case "User already registered":
+            errorMessage = "Пользователь с таким email уже зарегистрирован"
+            break
+          case "Password should be at least 6 characters":
+            errorMessage = "Пароль должен содержать минимум 6 символов"
+            break
+          case "Unable to validate email address: invalid format":
+            errorMessage = "Неверный формат email"
+            break
+          case "Signup is disabled":
+            errorMessage = "Регистрация временно недоступна"
+            break
+          default:
+            // Log the actual error for debugging but don't expose it to user
+            console.error("Sign-up error:", error.message)
+            errorMessage = "Произошла ошибка при регистрации. Попробуйте еще раз."
+        }
+      }
+
+      setError(errorMessage)
     } finally {
       setIsLoading(false)
     }
@@ -80,7 +138,13 @@ export default function SignUpPage() {
                     required
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
+                    onBlur={(e) => validateField("username", e.target.value)}
                   />
+                  {fieldErrors.username && (
+                    <div className="p-2 rounded-md bg-destructive/10 border border-destructive/20">
+                      <p className="text-sm text-destructive">{fieldErrors.username}</p>
+                    </div>
+                  )}
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="email">Email</Label>
@@ -91,7 +155,13 @@ export default function SignUpPage() {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    onBlur={(e) => validateField("email", e.target.value)}
                   />
+                  {fieldErrors.email && (
+                    <div className="p-2 rounded-md bg-destructive/10 border border-destructive/20">
+                      <p className="text-sm text-destructive">{fieldErrors.email}</p>
+                    </div>
+                  )}
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="password">Пароль</Label>
@@ -113,7 +183,11 @@ export default function SignUpPage() {
                     onChange={(e) => setRepeatPassword(e.target.value)}
                   />
                 </div>
-                {error && <p className="text-sm text-destructive">{error}</p>}
+                {error && (
+                  <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20">
+                    <p className="text-sm text-destructive">{error}</p>
+                  </div>
+                )}
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? "Регистрация..." : "Зарегистрироваться"}
                 </Button>

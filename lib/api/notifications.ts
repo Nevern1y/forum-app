@@ -1,18 +1,5 @@
 import { createClient } from "@/lib/supabase/client"
-
-export interface Notification {
-  id: string
-  user_id: string
-  type: string
-  related_user_id: string | null
-  related_content_id: string | null
-  title: string
-  message: string | null
-  link: string | null
-  is_read: boolean
-  read_at: string | null
-  created_at: string
-}
+import type { Notification } from "@/lib/types"
 
 /**
  * Получить уведомления пользователя
@@ -123,7 +110,7 @@ export async function deleteNotification(notificationId: string) {
  */
 export function subscribeToNotifications(
   userId: string,
-  onNotification: (notification: any) => void
+  onNotification: (notification: Notification) => void
 ) {
   const supabase = createClient()
 
@@ -138,7 +125,7 @@ export function subscribeToNotifications(
         filter: `user_id=eq.${userId}`,
       },
       (payload) => {
-        onNotification(payload.new)
+        onNotification(payload.new as Notification)
       }
     )
     .subscribe()

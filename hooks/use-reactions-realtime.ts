@@ -14,7 +14,7 @@ interface Reaction {
 interface UseReactionsRealtimeOptions {
   postId?: string
   onNewReaction?: (reaction: Reaction) => void
-  onDeleteReaction?: (reactionId: string) => void
+  onDeleteReaction?: (reaction: Reaction) => void
   onReactionsChange?: () => void
 }
 
@@ -35,7 +35,7 @@ export function useReactionsRealtime({
       onReactionsChange?.()
     },
     onDelete: (reaction) => {
-      onDeleteReaction?.(reaction.id)
+      onDeleteReaction?.(reaction)
       onReactionsChange?.()
     },
   })

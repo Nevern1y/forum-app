@@ -57,7 +57,7 @@ export async function SearchResults({ query, searchType }: SearchResultsProps) {
         </div>
         {posts.map((post) => {
           const profile = post.profiles
-          const tags = post.post_tags.map((pt) => pt.tags?.name).filter(Boolean)
+          const tags = post.post_tags.map((pt: { tags: { name: string } | null }) => pt.tags?.name).filter(Boolean)
 
           return (
             <Card key={post.id} className="group hover:shadow-lg hover:border-primary/20 transition-all duration-300 overflow-hidden dark:bg-[#181818]">
@@ -88,7 +88,7 @@ export async function SearchResults({ query, searchType }: SearchResultsProps) {
                 </Link>
                 {tags.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-3">
-                    {tags.map((tag) => (
+                    {tags.map((tag: string) => (
                       <Badge key={tag} variant="secondary" className="text-xs font-medium hover:bg-primary/10 transition-colors">
                         #{tag}
                       </Badge>

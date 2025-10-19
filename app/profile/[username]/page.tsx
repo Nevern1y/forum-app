@@ -89,7 +89,7 @@ export default async function ProfilePage({
                     <span className="text-lg">📝</span>
                   </span>
                   <span className="hidden sm:inline">Посты</span>
-                  {postCount > 0 && (
+                  {(postCount ?? 0) > 0 && (
                     <span className="text-xs font-bold bg-muted px-2 py-0.5 rounded-lg tabular-nums group-data-[state=active]:bg-primary/10 group-data-[state=active]:text-primary transition-all duration-200">
                       {postCount}
                     </span>
@@ -105,7 +105,7 @@ export default async function ProfilePage({
                     <span className="text-lg">💬</span>
                   </span>
                   <span className="hidden sm:inline">Ответы</span>
-                  {commentCount > 0 && (
+                  {(commentCount ?? 0) > 0 && (
                     <span className="text-xs font-bold bg-muted px-2 py-0.5 rounded-lg tabular-nums group-data-[state=active]:bg-primary/10 group-data-[state=active]:text-primary transition-all duration-200">
                       {commentCount}
                     </span>

@@ -17,6 +17,7 @@ import {
 import { formatDistanceToNow } from "date-fns"
 import { ru } from "date-fns/locale"
 import { cn } from "@/lib/utils"
+import type { Notification } from "@/lib/types"
 
 interface NotificationListProps {
   userId: string
@@ -25,7 +26,7 @@ interface NotificationListProps {
 }
 
 export function NotificationList({ userId, onNotificationsRead, onClose }: NotificationListProps) {
-  const [notifications, setNotifications] = useState<any[]>([])
+  const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
 
@@ -219,7 +220,16 @@ export function NotificationList({ userId, onNotificationsRead, onClose }: Notif
   )
 }
 
-function NotificationContent({ notification, relatedUser }: any) {
+interface NotificationContentProps {
+  notification: Notification
+  relatedUser?: {
+    username: string
+    display_name: string | null
+    avatar_url?: string | null
+  }
+}
+
+function NotificationContent({ notification, relatedUser }: NotificationContentProps) {
   return (
     <div className="flex gap-3">
       {relatedUser && (
@@ -232,10 +242,7 @@ function NotificationContent({ notification, relatedUser }: any) {
       )}
 
       <div className="flex-1 min-w-0 space-y-1 pr-8">
-        <p className="text-sm font-medium line-clamp-2 leading-snug">{notification.title}</p>
-        {notification.message && (
-          <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{notification.message}</p>
-        )}
+        <p className="text-sm font-medium line-clamp-2 leading-snug">{notification.content}</p>
         <p className="text-xs text-muted-foreground/70 flex items-center gap-1">
           <span className="inline-block w-1 h-1 rounded-full bg-muted-foreground/50" />
           {formatDistanceToNow(new Date(notification.created_at), {

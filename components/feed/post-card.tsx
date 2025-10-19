@@ -12,33 +12,10 @@ import { SharePostButton } from "@/components/post/share-post-button"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 import { useReactionsRealtime } from "@/hooks/use-reactions-realtime"
+import type { Post } from "@/lib/types"
 
 interface PostCardProps {
-  post: {
-    id: string
-    title: string
-    content: string
-    views: number
-    likes: number
-    dislikes: number
-    created_at: string
-    is_pinned?: boolean
-    media_urls?: string[] | null
-    audio_url?: string | null
-    comment_count?: number
-    user_reaction?: string | null
-    profiles: {
-      username: string
-      display_name: string | null
-      avatar_url: string | null
-      reputation: number
-    } | null
-    post_tags: Array<{
-      tags: {
-        name: string
-      } | null
-    }>
-  }
+  post: Post
 }
 
 // Remove markdown formatting for plain text preview
@@ -71,7 +48,7 @@ const stripMarkdown = (text: string): string => {
 
 const PostCardComponent = ({ post }: PostCardProps) => {
   const profile = post.profiles
-  const tags = post.post_tags.map((pt) => pt.tags?.name).filter(Boolean)
+  const tags = post.post_tags?.map((pt) => pt.tags?.name).filter(Boolean) || []
   
   const [userReaction, setUserReaction] = useState<string | null>(post.user_reaction || null)
   const [likesCount, setLikesCount] = useState(post.likes)
@@ -103,10 +80,18 @@ const PostCardComponent = ({ post }: PostCardProps) => {
         setUserReaction(reaction.reaction_type)
       }
     },
-    onDeleteReaction: (reactionId) => {
-      // Для удаления нужно знать, какой тип был удалён
-      // TODO: Передавать reaction_type в onDeleteReaction
-      // Пока просто рефетчим данные после удаления
+    onDeleteReaction: (reaction) => {
+      // Уменьшаем счетчик на основе типа удаленной реакции
+      if (reaction.reaction_type === 'like') {
+        setLikesCount(prev => Math.max(0, prev - 1))
+      } else if (reaction.reaction_type === 'dislike') {
+        setDislikesCount(prev => Math.max(0, prev - 1))
+      }
+
+      // Если это была наша реакция - сбрасываем статус
+      if (reaction.user_id === currentUserId) {
+        setUserReaction(null)
+      }
     },
   })
 
@@ -227,7 +212,7 @@ const PostCardComponent = ({ post }: PostCardProps) => {
       
       // Успех - оставляем оптимистичное обновление как есть
       setIsReacting(false)
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error handling reaction:', error)
       
       // Откатываем изменения только при ошибке

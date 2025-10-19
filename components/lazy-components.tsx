@@ -78,7 +78,7 @@ export const LazySharePostModal = dynamic(
 )
 
 export const LazyChart = dynamic(
-  () => import('@/components/ui/chart'),
+  () => import('@/components/ui/chart').then(mod => ({ default: mod.ChartContainer })),
   {
     loading: () => <LoadingSpinner />,
     ssr: false,

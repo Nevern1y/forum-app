@@ -34,8 +34,9 @@ export function MarkdownViewer({ content, className }: MarkdownViewerProps) {
               </a>
             )
           },
-          code({ node, inline, className, children, ...props }) {
-            return inline ? (
+          code({ node, className, children, ...props }: any) {
+            const isInline = !className
+            return isInline ? (
               <code className={className} {...props}>
                 {children}
               </code>

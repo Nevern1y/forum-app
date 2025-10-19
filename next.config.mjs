@@ -47,10 +47,10 @@ const withPWA = withPWAInit({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false,
   },
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   // Оптимизация изображений
   images: {
@@ -78,15 +78,6 @@ const nextConfig = {
       'react-markdown',
     ],
     scrollRestoration: true,
-    // Turbopack для dev
-    turbo: {
-      rules: {
-        '*.svg': {
-          loaders: ['@svgr/webpack'],
-          as: '*.js',
-        },
-      },
-    },
   },
   // Сжатие
   compress: true,

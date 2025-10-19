@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, memo } from "react"
+import { useState, useEffect, memo, useCallback } from "react"
 import { createPortal } from "react-dom"
 import Image from "next/image"
 import { X, ChevronLeft, ChevronRight, Download } from "lucide-react"
@@ -18,6 +18,7 @@ const MediaGalleryComponent = ({ images, className = "", compact = false, disabl
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
   const [isClosing, setIsClosing] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [imageErrors, setImageErrors] = useState<Set<number>>(new Set())
 
   useEffect(() => {
     setMounted(true)
@@ -53,6 +54,10 @@ const MediaGalleryComponent = ({ images, className = "", compact = false, disabl
       setSelectedIndex(selectedIndex + 1)
     }
   }
+
+  const handleImageError = useCallback((index: number) => {
+    setImageErrors(prev => new Set(prev).add(index))
+  }, [])
 
   const downloadImage = () => {
     if (selectedIndex === null) return
@@ -113,40 +118,55 @@ const MediaGalleryComponent = ({ images, className = "", compact = false, disabl
     <>
       {/* Gallery Grid */}
       <div className={cn("grid gap-2 rounded-xl overflow-hidden", getGridCols(), className)}>
-        {displayImages.map((image, index) => (
-          <button
-            key={index}
-            onClick={(e) => {
-              e.preventDefault()
-              e.stopPropagation()
-              openLightbox(index)
-            }}
-            className={cn(
-              "relative overflow-hidden bg-muted/50",
-              !disableHover && "hover:opacity-95 transition-opacity group",
-              getAspectRatio()
-            )}
-          >
-            <Image
-              src={image}
-              alt={`Image ${index + 1}`}
-              fill
-              className={cn(
-                "object-cover",
-                !disableHover && "transition-opacity duration-300 group-hover:opacity-90"
-              )}
-              sizes={compact ? "200px" : images.length === 1 ? "800px" : "400px"}
-              loading="lazy"
-              placeholder="blur"
-              blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iI2VlZSIvPjwvc3ZnPg=="
-            />
-            {hiddenCount > 0 && index === displayImages.length - 1 && (
-              <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
-                <span className="text-white text-xl font-bold">+{hiddenCount}</span>
-              </div>
-            )}
-          </button>
-        ))}
+        {displayImages.map((image, index) => {
+           const hasError = imageErrors.has(index)
+           return (
+             <button
+               key={index}
+               onClick={(e) => {
+                 e.preventDefault()
+                 e.stopPropagation()
+                 if (!hasError) {
+                   openLightbox(index)
+                 }
+               }}
+               className={cn(
+                 "relative overflow-hidden bg-muted/50",
+                 !disableHover && !hasError && "hover:opacity-95 transition-opacity group",
+                 getAspectRatio(),
+                 hasError && "cursor-default"
+               )}
+             >
+               {hasError ? (
+                 <div className="w-full h-full flex items-center justify-center bg-muted text-muted-foreground">
+                   <div className="text-center p-4">
+                     <div className="text-sm">Изображение недоступно</div>
+                   </div>
+                 </div>
+               ) : (
+                 <Image
+                   src={image}
+                   alt={`Image ${index + 1}`}
+                   fill
+                   className={cn(
+                     "object-cover",
+                     !disableHover && "transition-opacity duration-300 group-hover:opacity-90"
+                   )}
+                   sizes={compact ? "200px" : images.length === 1 ? "800px" : "400px"}
+                   loading="lazy"
+                   placeholder="blur"
+                   blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iI2VlZSIvPjwvc3ZnPg=="
+                   onError={() => handleImageError(index)}
+                 />
+               )}
+               {hiddenCount > 0 && index === displayImages.length - 1 && (
+                 <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
+                   <span className="text-white text-xl font-bold">+{hiddenCount}</span>
+                 </div>
+               )}
+             </button>
+           )
+         })}
       </div>
 
       {/* Custom Lightbox - Portal to body */}
@@ -166,15 +186,25 @@ const MediaGalleryComponent = ({ images, className = "", compact = false, disabl
               onClick={(e) => e.stopPropagation()}
             >
               <div className="relative w-full h-full">
-                <Image
-                  src={images[selectedIndex]}
-                  alt={`Image ${selectedIndex + 1}`}
-                  fill
-                  className="object-contain"
-                  sizes="90vw"
-                  quality={100}
-                  priority
-                />
+                {imageErrors.has(selectedIndex) ? (
+                  <div className="w-full h-full flex items-center justify-center bg-muted text-muted-foreground">
+                    <div className="text-center p-4">
+                      <div className="text-lg mb-2">Изображение недоступно</div>
+                      <div className="text-sm">Не удалось загрузить изображение</div>
+                    </div>
+                  </div>
+                ) : (
+                  <Image
+                    src={images[selectedIndex]}
+                    alt={`Image ${selectedIndex + 1}`}
+                    fill
+                    className="object-contain"
+                    sizes="90vw"
+                    quality={100}
+                    priority
+                    onError={() => handleImageError(selectedIndex)}
+                  />
+                )}
               </div>
             </div>
 

@@ -36,6 +36,7 @@ export default async function PostPage({
   // Выполняем все запросы параллельно для ускорения загрузки
   const [
     { data: post, error },
+    { data: reactions },
     { data: userReaction },
     { data: bookmark },
   ] = await Promise.all([
@@ -51,6 +52,11 @@ export default async function PostPage({
       `)
       .eq("id", id)
       .single(),
+    // Get reaction counts
+    supabase
+      .from("post_reactions")
+      .select("reaction_type")
+      .eq("post_id", id),
     // Check user's reaction
     supabase
       .from("post_reactions")
@@ -71,13 +77,19 @@ export default async function PostPage({
     notFound()
   }
 
+  // Calculate likes and dislikes from reactions
+  const likes = reactions?.filter((r) => r.reaction_type === "like").length || 0
+  const dislikes = reactions?.filter((r) => r.reaction_type === "dislike").length || 0
+
   // Increment view count (fire and forget с логированием ошибок)
-  supabase.rpc("increment_post_views", { post_id: id }).then().catch((error) => {
-    console.error("Failed to increment post views:", error)
+  supabase.rpc("increment_post_views", { post_id: id }).then(({ error }) => {
+    if (error) {
+      console.error("Failed to increment post views:", error)
+    }
   })
 
   const profile = post.profiles
-  const tags = post.post_tags.map((pt) => pt.tags?.name).filter(Boolean)
+  const tags = post.post_tags?.map((pt: { tags: { name: string } | null }) => pt.tags?.name).filter(Boolean) || []
   const readingTime = calculateReadingTime(post.content)
 
   return (
@@ -124,7 +136,7 @@ export default async function PostPage({
               <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold break-words leading-tight">{post.title}</h1>
               {tags.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                  {tags.map((tag) => (
+                  {tags.map((tag: string) => (
                     <Badge key={tag} variant="secondary" className="text-xs sm:text-sm">
                       {tag}
                     </Badge>
@@ -150,9 +162,9 @@ export default async function PostPage({
           <PostActions
             postId={post.id}
             postTitle={post.title}
-            likes={post.likes}
-            dislikes={post.dislikes}
-            views={post.views}
+            likes={likes}
+            dislikes={dislikes}
+            views={post.views || 0}
             userReaction={userReaction?.reaction_type || null}
             isBookmarked={!!bookmark}
           />
