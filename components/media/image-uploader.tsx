@@ -264,20 +264,7 @@ export function ImageUploader({ onUpload, maxImages = 5, existingImages = [], bu
             {uploading ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                <span className="mr-2">Загрузка...</span>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    abortController?.abort()
-                    setAbortController(null)
-                    setUploading(false)
-                    toast.info("Загрузка отменена")
-                  }}
-                  className="text-xs underline hover:no-underline"
-                >
-                  Отмена
-                </button>
+                Загрузка...
               </>
             ) : (
               <>
