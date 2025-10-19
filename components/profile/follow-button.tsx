@@ -1,57 +1,81 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
-import { createClient } from "@/lib/supabase/client"
 import { useState } from "react"
+import { Button } from "@/components/ui/button"
+import { UserPlus, UserMinus, Loader2 } from "lucide-react"
+import { toggleFollow } from "@/lib/api/subscriptions"
+import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 
 interface FollowButtonProps {
-  profileId: string
-  isFollowing: boolean
+  userId: string
+  initialIsFollowing: boolean
+  username: string
+  className?: string
 }
 
-export function FollowButton({ profileId, isFollowing: initialIsFollowing }: FollowButtonProps) {
+export function FollowButton({
+  userId,
+  initialIsFollowing,
+  username,
+  className = ""
+}: FollowButtonProps) {
   const [isFollowing, setIsFollowing] = useState(initialIsFollowing)
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
 
-  const handleFollow = async () => {
+  const handleToggleFollow = async () => {
     setIsLoading(true)
-    const supabase = createClient()
 
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (!user) return
+      const result = await toggleFollow(userId)
 
-      if (isFollowing) {
-        await supabase.from("subscriptions").delete().eq("follower_id", user.id).eq("following_id", profileId)
-        setIsFollowing(false)
-      } else {
-        await supabase.from("subscriptions").insert({
-          follower_id: user.id,
-          following_id: profileId,
+      setIsFollowing(result.following)
+
+      if (result.action === 'followed') {
+        toast.success(`Вы подписались на @${username}`, {
+          description: "Посты этого пользователя появятся в вашей ленте"
         })
-        setIsFollowing(true)
+      } else {
+        toast.info(`Вы отписались от @${username}`)
       }
+
+      // Refresh to update counts
       router.refresh()
     } catch (error) {
-      console.error("[v0] Error toggling follow:", error)
+      console.error('[FollowButton] Error:', error)
+      toast.error("Ошибка", {
+        description: error instanceof Error ? error.message : "Не удалось выполнить действие"
+      })
     } finally {
       setIsLoading(false)
     }
   }
 
   return (
-    <Button 
-      onClick={handleFollow} 
-      disabled={isLoading} 
+    <Button
+      onClick={handleToggleFollow}
+      disabled={isLoading}
       variant={isFollowing ? "outline" : "default"}
-      size="sm"
-      className="h-9 min-w-[120px] font-semibold"
+      size="default"
+      className={`gap-2 font-semibold transition-all duration-200 ${className}`}
     >
-      {isLoading ? "..." : isFollowing ? "Подписан" : "Подписаться"}
+      {isLoading ? (
+        <>
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>Загрузка...</span>
+        </>
+      ) : isFollowing ? (
+        <>
+          <UserMinus className="h-4 w-4" />
+          <span>Отписаться</span>
+        </>
+      ) : (
+        <>
+          <UserPlus className="h-4 w-4" />
+          <span>Подписаться</span>
+        </>
+      )}
     </Button>
   )
 }
