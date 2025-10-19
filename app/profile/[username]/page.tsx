@@ -10,7 +10,14 @@ export default async function ProfilePage({
 }: {
   params: Promise<{ username: string }>
 }) {
-  const { username } = await params
+  const resolvedParams = await params
+  const username = resolvedParams.username
+  
+  // Validate username
+  if (!username || username.trim() === '') {
+    notFound()
+  }
+
   const supabase = await createClient()
 
   const {
@@ -20,10 +27,18 @@ export default async function ProfilePage({
     redirect("/auth/login")
   }
 
+  // Decode username in case it's URL encoded
+  const decodedUsername = decodeURIComponent(username)
+
   // Get profile data
-  const { data: profile, error } = await supabase.from("profiles").select("*").eq("username", username).single()
+  const { data: profile, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("username", decodedUsername)
+    .single()
 
   if (error || !profile) {
+    console.error('[Profile Page] User not found:', decodedUsername, error)
     notFound()
   }
 
