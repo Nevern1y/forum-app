@@ -231,20 +231,22 @@ const PostCardComponent = ({ post }: PostCardProps) => {
       <div className="flex gap-3 px-4 sm:px-5 py-4 sm:py-5">
         {profileLink ? (
           <Link href={profileLink} className="shrink-0 pt-0.5">
-          <Avatar className="h-11 w-11 sm:h-9 sm:w-9 ring-1 ring-border">
-            <AvatarImage src={profile?.avatar_url || undefined} />
-            <AvatarFallback className="bg-muted text-foreground text-sm font-medium">
-              {profile?.display_name?.[0]?.toUpperCase() || profile?.username[0].toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
-        </Link>
+            <Avatar className="h-11 w-11 sm:h-9 sm:w-9 ring-1 ring-border">
+              <AvatarImage src={profile?.avatar_url || undefined} />
+              <AvatarFallback className="bg-muted text-foreground text-sm font-medium">
+                {profile?.display_name?.[0]?.toUpperCase() || profile?.username?.[0]?.toUpperCase() || "?"}
+              </AvatarFallback>
+            </Avatar>
+          </Link>
         ) : (
-          <Avatar className="h-11 w-11 sm:h-9 sm:w-9 ring-1 ring-border">
-            <AvatarImage src={profile?.avatar_url || undefined} />
-            <AvatarFallback className="bg-muted text-foreground text-sm font-medium">
-              {(profile?.display_name?.[0] || profile?.username?.[0] || "?").toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
+          <div className="shrink-0 pt-0.5">
+            <Avatar className="h-11 w-11 sm:h-9 sm:w-9 ring-1 ring-border">
+              <AvatarImage src={profile?.avatar_url || undefined} />
+              <AvatarFallback className="bg-muted text-foreground text-sm font-medium">
+                {(profile?.display_name?.[0] || profile?.username?.[0] || "?").toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+          </div>
         )}
 
         <div className="flex-1 min-w-0 space-y-1.5">
