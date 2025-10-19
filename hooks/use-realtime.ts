@@ -3,17 +3,9 @@
 import { useEffect, useRef } from "react"
 import { createClient } from "@/lib/supabase/client"
 import type { RealtimeChannel, REALTIME_POSTGRES_CHANGES_LISTEN_EVENT } from "@supabase/supabase-js"
+import type { RealtimePayload } from "@/lib/types"
 
 export type RealtimeEvent = "INSERT" | "UPDATE" | "DELETE" | "*"
-
-interface RealtimePayload<T> {
-  eventType: "INSERT" | "UPDATE" | "DELETE"
-  new: T
-  old: T
-  schema: string
-  table: string
-  commit_timestamp: string
-}
 
 interface UseRealtimeOptions<T = unknown> {
   table: string
