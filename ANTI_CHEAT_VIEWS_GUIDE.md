@@ -28,6 +28,11 @@
 **Файл:** `FIX_UNIQUE_POST_VIEWS.sql`
 
 ```sql
+-- Сначала разрешаем NULL для анонимных пользователей
+ALTER TABLE post_views 
+ALTER COLUMN user_id DROP NOT NULL;
+
+-- Затем создаем функцию
 DROP FUNCTION IF EXISTS increment_post_views(uuid);
 
 CREATE OR REPLACE FUNCTION increment_post_views(post_id uuid)
