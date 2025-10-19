@@ -38,15 +38,15 @@ BEGIN
       user_id,
       type,
       related_user_id,
-      related_post_id,
+      related_content_id,
       title,
-      content,
+      message,
       link,
       is_read
     )
     VALUES (
       post_author_id,
-      'comment',
+      'post_comment',
       NEW.user_id,
       NEW.post_id,
       'Новый комментарий',
@@ -109,15 +109,15 @@ BEGIN
       user_id,
       type,
       related_user_id,
-      related_post_id,
+      related_content_id,
       title,
-      content,
+      message,
       link,
       is_read
     )
     VALUES (
       parent_comment_author_id,
-      'reply',
+      'comment_reply',
       NEW.user_id,
       NEW.post_id,
       'Ответ на комментарий',
@@ -179,15 +179,15 @@ BEGIN
       user_id,
       type,
       related_user_id,
-      related_post_id,
+      related_content_id,
       title,
-      content,
+      message,
       link,
       is_read
     )
     VALUES (
       post_author_id,
-      'like',
+      'post_like',
       NEW.user_id,
       NEW.post_id,
       'Новый лайк',
@@ -251,9 +251,9 @@ BEGIN
         user_id,
         type,
         related_user_id,
-        related_post_id,
+        related_content_id,
         title,
-        content,
+        message,
         link,
         is_read
       )
@@ -303,7 +303,7 @@ BEGIN
     FROM notifications
     WHERE user_id = user_id_param
       AND type = type_param
-      AND related_post_id = post_id_param
+      AND related_content_id = post_id_param
       AND created_at > NOW() - INTERVAL '5 minutes'
       AND is_read = false
   ) INTO recent_notification_exists;
@@ -350,10 +350,10 @@ WHERE is_read = false;
 CREATE INDEX IF NOT EXISTS idx_notifications_type 
 ON notifications(user_id, type, created_at DESC);
 
--- Индекс для связанного поста
-CREATE INDEX IF NOT EXISTS idx_notifications_post 
-ON notifications(related_post_id, created_at DESC)
-WHERE related_post_id IS NOT NULL;
+-- Индекс для связанного контента
+CREATE INDEX IF NOT EXISTS idx_notifications_content 
+ON notifications(related_content_id, created_at DESC)
+WHERE related_content_id IS NOT NULL;
 
 -- ============================================================================
 -- КОММЕНТАРИИ
