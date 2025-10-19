@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { Home, Search, Heart, User, MoreHorizontal, Palette, Settings, Bookmark, Flag, LogOut, List, MessageCircle } from "lucide-react"
+import { Home, Search, Heart, User, MoreHorizontal, Palette, Settings, Bookmark, Flag, LogOut, List, MessageCircle, Users } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,8 +32,8 @@ export function NavigationSidebar({ username }: NavigationSidebarProps) {
 
   const navItems = [
     { href: "/feed", icon: Home, label: "Главная" },
+    { href: "/following", icon: Users, label: "Подписки" },
     { href: "/search", icon: Search, label: "Поиск" },
-    { href: "/messages", icon: MessageCircle, label: "Сообщения" },
     { href: "/liked-posts", icon: Heart, label: "Понравившееся" },
     { href: `/profile/${username}`, icon: User, label: "Профиль" },
   ]
