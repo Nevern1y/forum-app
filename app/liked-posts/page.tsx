@@ -45,16 +45,16 @@ export default async function LikedPostsPage() {
   }
 
   // Получаем полные данные постов с использованием функции
-  const { data: posts, error } = await supabase.rpc("get_posts_with_counts", {
-    p_user_id: user.id,
-  })
+  const { data: posts, error } = await supabase.rpc("get_posts_with_counts")
 
   if (error) {
     console.error("[Liked Posts] Error fetching posts:", error)
   }
 
-  // Фильтруем только лайкнутые посты
-  const likedPosts = posts?.filter((post: any) => likedPostIds.includes(post.id)) || []
+  // Фильтруем только лайкнутые посты и сортируем по порядку лайков
+  const likedPosts = likedPostIds
+    .map(postId => posts?.find((post: any) => post.id === postId))
+    .filter(Boolean)
 
   return (
     <div className="min-h-screen bg-muted/30 dark:bg-background">
