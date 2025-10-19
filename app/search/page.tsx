@@ -149,13 +149,18 @@ export default function SearchPage() {
           {/* Search Bar */}
           <div className="max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
             <div className="relative group">
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/50 to-primary/30 rounded-lg blur opacity-30 group-hover:opacity-50 transition duration-500" />
-              <div className="relative">
+              {/* Animated gradient border */}
+              <div className="absolute -inset-[2px] bg-gradient-to-r from-primary via-primary/60 to-primary rounded-xl opacity-0 group-hover:opacity-100 blur-sm transition-all duration-500 group-hover:blur-md" />
+              <div className="absolute -inset-[2px] bg-gradient-to-r from-primary via-primary/60 to-primary rounded-xl opacity-0 group-hover:opacity-75 transition-opacity duration-500" />
+              
+              {/* Glow effect */}
+              <div className="absolute inset-0 rounded-xl bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              
+              <div className="relative bg-background rounded-xl">
                 <SearchBarAdvanced
                   defaultValue={query}
                   onSearch={setQuery}
                   placeholder="Поиск постов, тегов, пользователей..."
-                  className="shadow-xl"
                 />
               </div>
             </div>
