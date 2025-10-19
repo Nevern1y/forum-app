@@ -14,16 +14,17 @@ export default async function BookmarksPage() {
     redirect("/auth/login")
   }
 
-  // Получаем ID постов из закладок пользователя
+  // Получаем ID постов из закладок пользователя (только ID для скорости)
   const { data: bookmarks } = await supabase
     .from("bookmarks")
-    .select("post_id, created_at")
+    .select("post_id")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
+    .limit(50) // Ограничиваем количество для производительности
 
   const bookmarkedPostIds = bookmarks?.map((b) => b.post_id) || []
 
-  // Если нет закладок, показываем пустое состояние
+  // Если нет закладок, показываем пустое состояние (ранний выход)
   if (bookmarkedPostIds.length === 0) {
     return (
       <div className="min-h-screen bg-muted/30 dark:bg-background">
@@ -66,15 +67,24 @@ export default async function BookmarksPage() {
   }
 
   // Получаем полные данные постов с использованием RPC функции
-  const { data: posts, error } = await supabase.rpc("get_posts_with_counts")
+  // Передаем limit для оптимизации
+  const { data: posts, error } = await supabase.rpc("get_posts_with_counts", {
+    limit_count: 50
+  })
 
   if (error) {
     console.error("[Bookmarks] Error fetching posts:", error)
   }
 
   // Фильтруем только закладки и сохраняем порядок сортировки
+  // Используем Set для быстрого поиска O(1) вместо find O(n)
+  const bookmarkedPostsMap = new Map(
+    posts?.filter((post: any) => bookmarkedPostIds.includes(post.id))
+      .map((post: any) => [post.id, post]) || []
+  )
+  
   const bookmarkedPosts = bookmarkedPostIds
-    .map(postId => posts?.find((post: any) => post.id === postId))
+    .map(postId => bookmarkedPostsMap.get(postId))
     .filter(Boolean)
 
   return (
