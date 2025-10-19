@@ -84,11 +84,13 @@ export default async function PostPage({
   // Increment view count (fire and forget с защитой от накрутки)
   supabase.rpc("increment_post_views", { post_id: id }).then(({ data, error }) => {
     if (error) {
-      console.error("[Post Views] Failed:", {
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code
+      console.error("[Post Views] Failed:", error)
+      console.error("[Post Views] Error details:", {
+        message: error.message || 'No message',
+        details: error.details || 'No details',
+        hint: error.hint || 'No hint',
+        code: error.code || 'No code',
+        status: (error as any).status || 'No status'
       })
     } else if (data) {
       // Функция возвращает JSON с информацией о просмотре
@@ -97,6 +99,8 @@ export default async function PostPage({
       } else {
         console.log(`[Post Views] 🕐 Cooldown (${data.cooldown_minutes}min), current: ${data.views}`)
       }
+    } else {
+      console.warn("[Post Views] No data returned from function")
     }
   })
 
