@@ -96,11 +96,11 @@ FOR DELETE USING ((SELECT auth.uid()) = user_id);
 -- subscriptions
 DROP POLICY IF EXISTS "subscriptions_insert_own" ON subscriptions;
 CREATE POLICY "subscriptions_insert_own" ON subscriptions
-FOR INSERT WITH CHECK ((SELECT auth.uid()) = subscriber_id);
+FOR INSERT WITH CHECK ((SELECT auth.uid()) = follower_id);
 
 DROP POLICY IF EXISTS "subscriptions_delete_own" ON subscriptions;
 CREATE POLICY "subscriptions_delete_own" ON subscriptions
-FOR DELETE USING ((SELECT auth.uid()) = subscriber_id);
+FOR DELETE USING ((SELECT auth.uid()) = follower_id);
 
 -- post_tags
 DROP POLICY IF EXISTS "post_tags_insert_via_post" ON post_tags;
