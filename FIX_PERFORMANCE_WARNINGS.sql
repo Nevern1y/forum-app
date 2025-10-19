@@ -153,26 +153,23 @@ DROP POLICY IF EXISTS "Users can view own reports" ON reports;
 CREATE POLICY "Users can view own reports" ON reports
 FOR SELECT USING ((SELECT auth.uid()) = reporter_id);
 
--- ПРИМЕЧАНИЕ: Политики для модераторов пропущены, так как в таблице profiles нет колонки role
--- Если у вас есть система ролей, раскомментируйте и настройте эти политики:
--- 
--- DROP POLICY IF EXISTS "Moderators can view all reports" ON reports;
--- CREATE POLICY "Moderators can view all reports" ON reports
--- FOR SELECT USING (
---   EXISTS (
---     SELECT 1 FROM profiles 
---     WHERE id = (SELECT auth.uid()) AND your_role_column IN ('moderator', 'admin')
---   )
--- );
---
--- DROP POLICY IF EXISTS "Moderators can update reports" ON reports;
--- CREATE POLICY "Moderators can update reports" ON reports
--- FOR UPDATE USING (
---   EXISTS (
---     SELECT 1 FROM profiles 
---     WHERE id = (SELECT auth.uid()) AND your_role_column IN ('moderator', 'admin')
---   )
--- );
+DROP POLICY IF EXISTS "Moderators can view all reports" ON reports;
+CREATE POLICY "Moderators can view all reports" ON reports
+FOR SELECT USING (
+  EXISTS (
+    SELECT 1 FROM profiles 
+    WHERE id = (SELECT auth.uid()) AND reputation >= 10000
+  )
+);
+
+DROP POLICY IF EXISTS "Moderators can update reports" ON reports;
+CREATE POLICY "Moderators can update reports" ON reports
+FOR UPDATE USING (
+  EXISTS (
+    SELECT 1 FROM profiles 
+    WHERE id = (SELECT auth.uid()) AND reputation >= 10000
+  )
+);
 
 -- blocked_users
 DROP POLICY IF EXISTS "Users can block others" ON blocked_users;
