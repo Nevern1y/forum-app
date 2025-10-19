@@ -170,7 +170,7 @@ export function NotificationList({ userId, onNotificationsRead, onClose }: Notif
                   {notification.link ? (
                     <Link
                       href={notification.link}
-                      onClick={() => handleMarkAsRead(notification.id, notification.link)}
+                      onClick={() => handleMarkAsRead(notification.id, notification.link ?? null)}
                       className="block"
                     >
                       <NotificationContent
