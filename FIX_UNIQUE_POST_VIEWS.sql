@@ -9,6 +9,16 @@
 ALTER TABLE post_views 
 ALTER COLUMN user_id DROP NOT NULL;
 
+-- Шаг 2: УДАЛЯЕМ UNIQUE CONSTRAINT (он мешает записывать повторные просмотры)
+ALTER TABLE post_views 
+DROP CONSTRAINT IF EXISTS post_views_post_id_user_id_key;
+
+-- Проверяем что constraint удален
+SELECT constraint_name, constraint_type
+FROM information_schema.table_constraints
+WHERE table_name = 'post_views' 
+  AND table_schema = 'public';
+
 -- Проверяем структуру таблицы post_views
 SELECT column_name, data_type, is_nullable
 FROM information_schema.columns 
