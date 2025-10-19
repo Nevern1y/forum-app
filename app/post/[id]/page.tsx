@@ -84,13 +84,21 @@ export default async function PostPage({
   // Increment view count (fire and forget с защитой от накрутки)
   supabase.rpc("increment_post_views", { post_id: id }).then(({ data, error }) => {
     if (error) {
-      console.error("[Post Views] Failed:", error)
-      console.error("[Post Views] Error details:", {
-        message: error.message || 'No message',
-        details: error.details || 'No details',
-        hint: error.hint || 'No hint',
-        code: error.code || 'No code',
-        status: (error as any).status || 'No status'
+      // Полное логирование ошибки для диагностики
+      console.error("[Post Views] ❌ FAILED - Full error object:", error)
+      console.error("[Post Views] ❌ Error stringified:", JSON.stringify(error, null, 2))
+      console.error("[Post Views] ❌ Error keys:", Object.keys(error))
+      console.error("[Post Views] ❌ Error values:", Object.values(error))
+      
+      // Проверяем все возможные поля
+      const err = error as any
+      console.error("[Post Views] ❌ Parsed fields:", {
+        message: err.message || err.msg || 'No message',
+        details: err.details || err.detail || 'No details',
+        hint: err.hint || 'No hint',
+        code: err.code || err.error_code || 'No code',
+        status: err.status || err.statusCode || 'No status',
+        statusText: err.statusText || 'No status text'
       })
     } else if (data) {
       // Функция возвращает JSON с информацией о просмотре
@@ -100,7 +108,7 @@ export default async function PostPage({
         console.log(`[Post Views] 🕐 Cooldown (${data.cooldown_minutes}min), current: ${data.views}`)
       }
     } else {
-      console.warn("[Post Views] No data returned from function")
+      console.warn("[Post Views] ⚠️ No data returned from function")
     }
   })
 
