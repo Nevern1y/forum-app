@@ -31,22 +31,53 @@ export function useRealtime<T = unknown>({
 }: UseRealtimeOptions<T>) {
   const channelRef = useRef<RealtimeChannel | null>(null)
   const retryCountRef = useRef(0)
-  const maxRetries = 5
-  const baseDelay = 1000
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const isSubscribedRef = useRef(false)
+  
+  // Умная конфигурация повторных попыток
+  const maxRetries = 10 // Больше попыток
+  const baseDelay = 2000 // Начинаем с 2 секунд
+  const maxDelay = 30000 // Максимум 30 секунд между попытками
 
-  const attemptReconnect = (channel: RealtimeChannel) => {
+  const attemptReconnect = (channel: RealtimeChannel, reason: string) => {
+    // Очищаем предыдущий таймаут если есть
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current)
+      reconnectTimeoutRef.current = null
+    }
+
+    // Не пытаемся реконнектиться если уже подключены
+    if (isSubscribedRef.current) {
+      return
+    }
+
     if (retryCountRef.current >= maxRetries) {
-      console.error(`❌ [Realtime ${table}] Max retry attempts (${maxRetries}) reached. Giving up.`)
+      // Просто логируем без ошибки, не засоряем консоль
+      if (process.env.NODE_ENV === 'development') {
+        console.warn(`[Realtime ${table}] Stopped reconnecting after ${maxRetries} attempts`)
+      }
       return
     }
 
     retryCountRef.current++
-    const delay = baseDelay * Math.pow(2, retryCountRef.current - 1) + Math.random() * 1000
+    
+    // Exponential backoff с cap на максимальную задержку
+    const exponentialDelay = Math.min(
+      baseDelay * Math.pow(1.5, retryCountRef.current - 1),
+      maxDelay
+    )
+    
+    // Добавляем jitter чтобы избежать thundering herd
+    const jitter = Math.random() * 1000
+    const delay = exponentialDelay + jitter
 
-    console.log(`🔄 [Realtime ${table}] Attempting to reconnect in ${Math.round(delay)}ms (attempt ${retryCountRef.current}/${maxRetries})`)
+    // Логируем только в dev режиме
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[Realtime ${table}] Reconnecting in ${Math.round(delay / 1000)}s (${retryCountRef.current}/${maxRetries}) - ${reason}`)
+    }
 
-    setTimeout(() => {
-      if (channelRef.current) {
+    reconnectTimeoutRef.current = setTimeout(() => {
+      if (channelRef.current && !isSubscribedRef.current) {
         channel.subscribe()
       }
     }, delay)
@@ -82,7 +113,10 @@ export function useRealtime<T = unknown>({
         "postgres_changes" as any,
         config as any,
         (payload: any) => {
-          console.log(`[Realtime ${table}] Change received:`, payload.eventType)
+          // Логируем только в dev режиме
+          if (process.env.NODE_ENV === 'development') {
+            console.log(`[Realtime ${table}] ${payload.eventType}`)
+          }
 
           // Вызываем соответствующий обработчик
           switch (payload.eventType) {
@@ -102,21 +136,51 @@ export function useRealtime<T = unknown>({
         }
       )
       .subscribe((status, err) => {
-        console.log(`[Realtime ${table}] Status:`, status)
-
         if (status === "SUBSCRIBED") {
-          console.log(`✅ [Realtime ${table}] Successfully subscribed`)
+          isSubscribedRef.current = true
           retryCountRef.current = 0
+          
+          // Очищаем таймаут реконнекта
+          if (reconnectTimeoutRef.current) {
+            clearTimeout(reconnectTimeoutRef.current)
+            reconnectTimeoutRef.current = null
+          }
+          
+          // Логируем успех только в dev или при первом подключении
+          if (process.env.NODE_ENV === 'development' || retryCountRef.current === 0) {
+            console.log(`✅ [Realtime ${table}] Connected`)
+          }
         } else if (status === "CHANNEL_ERROR") {
-          console.error(`❌ [Realtime ${table}] Channel error:`, err)
-          console.error(`Check if realtime is enabled for ${table} in Supabase Dashboard`)
-          attemptReconnect(channel)
+          isSubscribedRef.current = false
+          
+          // Логируем ошибку только один раз или в dev режиме
+          if (retryCountRef.current === 0 || process.env.NODE_ENV === 'development') {
+            console.error(`❌ [Realtime ${table}] Channel error:`, err?.message || 'Unknown error')
+          }
+          
+          // Пытаемся реконнектиться
+          attemptReconnect(channel, 'channel_error')
         } else if (status === "TIMED_OUT") {
-          console.error(`⏱️ [Realtime ${table}] Connection timed out`)
-          attemptReconnect(channel)
+          isSubscribedRef.current = false
+          
+          // Timeout - частая ситуация, не засоряем консоль
+          if (process.env.NODE_ENV === 'development' && retryCountRef.current === 0) {
+            console.warn(`⏱️ [Realtime ${table}] Timeout, reconnecting...`)
+          }
+          
+          attemptReconnect(channel, 'timeout')
         } else if (status === "CLOSED") {
-          console.warn(`🔌 [Realtime ${table}] Connection closed`)
-          attemptReconnect(channel)
+          isSubscribedRef.current = false
+          
+          // Connection closed - нормальная ситуация при unmount
+          if (process.env.NODE_ENV === 'development' && retryCountRef.current === 0) {
+            console.log(`[Realtime ${table}] Disconnected`)
+          }
+          
+          // Реконнектимся только если это не unmount
+          if (channelRef.current) {
+            attemptReconnect(channel, 'closed')
+          }
         }
       })
 
@@ -124,10 +188,19 @@ export function useRealtime<T = unknown>({
 
     // Отписываемся при размонтировании
     return () => {
+      // Очищаем таймаут реконнекта
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current)
+        reconnectTimeoutRef.current = null
+      }
+      
+      // Отписываемся от канала
       if (channelRef.current) {
+        isSubscribedRef.current = false
         supabase.removeChannel(channelRef.current)
         channelRef.current = null
       }
+      
       retryCountRef.current = 0
     }
   }, [table, event, filter, onInsert, onUpdate, onDelete, onChange])
