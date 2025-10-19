@@ -25,7 +25,21 @@
 ALTER TABLE post_views 
 ALTER COLUMN user_id DROP NOT NULL;
 
--- Проверка: должно показать is_nullable = YES
+-- ============================================================================
+-- ШАГ 2: УДАЛЯЕМ UNIQUE CONSTRAINT
+-- ============================================================================
+-- ВАЖНО: Constraint мешает записывать историю просмотров!
+
+ALTER TABLE post_views 
+DROP CONSTRAINT IF EXISTS post_views_post_id_user_id_key;
+
+-- Проверка: не должно быть UNIQUE constraint
+SELECT constraint_name, constraint_type
+FROM information_schema.table_constraints
+WHERE table_name = 'post_views' 
+  AND table_schema = 'public';
+
+-- Проверка: is_nullable должен быть YES
 SELECT column_name, data_type, is_nullable
 FROM information_schema.columns 
 WHERE table_name = 'post_views' 
@@ -33,7 +47,7 @@ WHERE table_name = 'post_views'
   AND table_schema = 'public';
 
 -- ============================================================================
--- ШАГ 2: СОЗДАЕМ ФУНКЦИЮ С ЗАЩИТОЙ ОТ НАКРУТКИ
+-- ШАГ 3: СОЗДАЕМ ФУНКЦИЮ С ЗАЩИТОЙ ОТ НАКРУТКИ
 -- ============================================================================
 
 DROP FUNCTION IF EXISTS increment_post_views(uuid);
@@ -102,14 +116,14 @@ END;
 $$;
 
 -- ============================================================================
--- ШАГ 3: ДАЕМ ПРАВА
+-- ШАГ 4: ДАЕМ ПРАВА
 -- ============================================================================
 
 GRANT EXECUTE ON FUNCTION increment_post_views(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION increment_post_views(uuid) TO anon;
 
 -- ============================================================================
--- ШАГ 4: ТЕСТ (ОПЦИОНАЛЬНО)
+-- ШАГ 5: ТЕСТ (ОПЦИОНАЛЬНО)
 -- ============================================================================
 
 -- Замените YOUR_POST_ID на реальный ID поста
@@ -118,8 +132,10 @@ GRANT EXECUTE ON FUNCTION increment_post_views(uuid) TO anon;
 
 ### ✅ Результат:
 ```
-ALTER TABLE
-SELECT 1
+ALTER TABLE      (drop NOT NULL)
+ALTER TABLE      (drop constraint)
+SELECT 1         (constraints check)
+SELECT 1         (column check)
 DROP FUNCTION
 CREATE FUNCTION
 GRANT
@@ -221,6 +237,10 @@ npm run dev
 ### Ошибка: "null value in column user_id violates not-null constraint"
 **Причина:** Шаг 1 не выполнен  
 **Решение:** Выполните `ALTER TABLE post_views ALTER COLUMN user_id DROP NOT NULL;`
+
+### Ошибка: "duplicate key value violates unique constraint"
+**Причина:** Шаг 2 не выполнен (UNIQUE constraint не удален)  
+**Решение:** Выполните `ALTER TABLE post_views DROP CONSTRAINT IF EXISTS post_views_post_id_user_id_key;`
 
 ### Ошибка: "function increment_post_views does not exist"
 **Причина:** Шаг 2 не выполнен  
