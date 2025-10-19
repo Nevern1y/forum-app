@@ -145,9 +145,9 @@ RETURNS TABLE (
   content TEXT,
   author_id UUID,
   views INT,
-  likes INT,
-  dislikes INT,
-  comment_count INT,
+  likes BIGINT,
+  dislikes BIGINT,
+  comment_count BIGINT,
   created_at TIMESTAMPTZ,
   author_username TEXT,
   author_display_name TEXT,
@@ -166,59 +166,91 @@ BEGIN
   ts_query := plainto_tsquery('russian', search_query);
   
   RETURN QUERY
-  SELECT 
-    p.id,
-    p.title,
-    LEFT(p.content, 300) as content, -- Preview only
-    p.author_id,
-    p.views,
-    p.likes,
-    p.dislikes,
-    p.comment_count,
-    p.created_at,
-    pr.username as author_username,
-    pr.display_name as author_display_name,
-    pr.avatar_url as author_avatar_url,
-    ARRAY(
-      SELECT t.name 
-      FROM post_tags pt 
-      JOIN tags t ON t.id = pt.tag_id 
-      WHERE pt.post_id = p.id
-    ) as tags,
-    ts_rank(p.search_vector, ts_query) as rank
-  FROM posts p
-  JOIN profiles pr ON pr.id = p.author_id
-  WHERE 
-    -- Full-text search
-    (search_query = '' OR p.search_vector @@ ts_query)
-    -- Tag filter
-    AND (
-      tag_filter IS NULL 
-      OR EXISTS (
-        SELECT 1 FROM post_tags pt
-        JOIN tags t ON t.id = pt.tag_id
-        WHERE pt.post_id = p.id AND t.name ILIKE tag_filter
+  WITH post_stats AS (
+    SELECT
+      p.id,
+      p.title,
+      LEFT(p.content, 300) as content,
+      p.author_id,
+      p.views,
+      p.created_at,
+      p.search_vector,
+      
+      -- Get author info
+      prof.username as author_username,
+      prof.display_name as author_display_name,
+      prof.avatar_url as author_avatar_url,
+      
+      -- Aggregate likes
+      COUNT(DISTINCT CASE WHEN pr.reaction_type = 'like' THEN pr.id END) as like_count,
+      
+      -- Aggregate dislikes
+      COUNT(DISTINCT CASE WHEN pr.reaction_type = 'dislike' THEN pr.id END) as dislike_count,
+      
+      -- Count comments
+      COUNT(DISTINCT c.id) as comment_count,
+      
+      -- Get tags array
+      COALESCE(ARRAY_AGG(DISTINCT t.name) FILTER (WHERE t.name IS NOT NULL), ARRAY[]::TEXT[]) as tag_array,
+      
+      -- Calculate rank
+      ts_rank(p.search_vector, ts_query) as search_rank
+      
+    FROM posts p
+    LEFT JOIN profiles prof ON p.author_id = prof.id
+    LEFT JOIN post_reactions pr ON p.id = pr.post_id
+    LEFT JOIN comments c ON p.id = c.post_id
+    LEFT JOIN post_tags pt ON p.id = pt.post_id
+    LEFT JOIN tags t ON pt.tag_id = t.id
+    
+    WHERE
+      -- Full-Text Search filter
+      (search_query = '' OR p.search_vector @@ ts_query)
+      
+      -- Tag filter
+      AND (
+        tag_filter IS NULL 
+        OR EXISTS (
+          SELECT 1 FROM post_tags pt2
+          JOIN tags t2 ON t2.id = pt2.tag_id
+          WHERE pt2.post_id = p.id AND t2.name ILIKE tag_filter
+        )
       )
-    )
-    -- Author filter
-    AND (author_filter IS NULL OR p.author_id = author_filter)
-    -- Date filters
-    AND (date_from IS NULL OR p.created_at >= date_from)
-    AND (date_to IS NULL OR p.created_at <= date_to)
+      
+      -- Author filter
+      AND (author_filter IS NULL OR p.author_id = author_filter)
+      
+      -- Date range filter
+      AND (date_from IS NULL OR p.created_at >= date_from)
+      AND (date_to IS NULL OR p.created_at <= date_to)
+      
+    GROUP BY p.id, prof.username, prof.display_name, prof.avatar_url
+  )
+  
+  SELECT
+    ps.id,
+    ps.title,
+    ps.content,
+    ps.author_id,
+    ps.views,
+    ps.like_count,
+    ps.dislike_count,
+    ps.comment_count,
+    ps.created_at,
+    ps.author_username,
+    ps.author_display_name,
+    ps.author_avatar_url,
+    ps.tag_array as tags,
+    ps.search_rank as rank
+  FROM post_stats ps
+  
+  -- Sorting
   ORDER BY
-    CASE 
-      WHEN sort_by = 'relevance' THEN ts_rank(p.search_vector, ts_query)
-      ELSE NULL
-    END DESC NULLS LAST,
-    CASE 
-      WHEN sort_by = 'recent' THEN p.created_at
-      ELSE NULL
-    END DESC NULLS LAST,
-    CASE 
-      WHEN sort_by = 'popular' THEN (p.likes - p.dislikes + p.comment_count)
-      ELSE NULL
-    END DESC NULLS LAST,
-    p.created_at DESC -- Default fallback
+    CASE WHEN sort_by = 'relevance' THEN ps.search_rank END DESC NULLS LAST,
+    CASE WHEN sort_by = 'recent' THEN ps.created_at END DESC NULLS LAST,
+    CASE WHEN sort_by = 'popular' THEN ps.like_count END DESC NULLS LAST,
+    ps.created_at DESC
+    
   LIMIT page_size
   OFFSET page_offset;
 END;
