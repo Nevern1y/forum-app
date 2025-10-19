@@ -30,15 +30,28 @@ export default async function ProfilePage({
   // Decode username in case it's URL encoded
   const decodedUsername = decodeURIComponent(username)
 
-  // Get profile data
+  // Get profile data (case-insensitive search)
   const { data: profile, error } = await supabase
     .from("profiles")
     .select("*")
-    .eq("username", decodedUsername)
+    .ilike("username", decodedUsername)
     .single()
 
   if (error || !profile) {
     console.error('[Profile Page] User not found:', decodedUsername, error)
+    console.error('[Profile Page] Error details:', JSON.stringify(error, null, 2))
+    
+    // Try to find similar usernames for debugging
+    const { data: similarProfiles } = await supabase
+      .from("profiles")
+      .select("username")
+      .ilike("username", `%${decodedUsername}%`)
+      .limit(5)
+    
+    if (similarProfiles && similarProfiles.length > 0) {
+      console.log('[Profile Page] Similar usernames found:', similarProfiles.map(p => p.username))
+    }
+    
     notFound()
   }
 
