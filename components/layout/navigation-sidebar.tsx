@@ -40,7 +40,8 @@ export function NavigationSidebar({ username }: NavigationSidebarProps) {
 
   // Realtime подписка на сообщения
   useMessagesRealtime({
-    userId: userId || "",
+    userId: userId || undefined,
+    enabled: !!userId,
     onNewMessage: () => {
       setUnreadMessagesCount((prev) => prev + 1)
     },

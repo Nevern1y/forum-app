@@ -10,7 +10,7 @@ export type RealtimeEvent = "INSERT" | "UPDATE" | "DELETE" | "*"
 interface UseRealtimeOptions<T = unknown> {
   table: string
   event?: RealtimeEvent
-  filter?: string
+  filter?: string | undefined  // Может быть undefined для отключения
   onInsert?: (payload: T) => void
   onUpdate?: (payload: { old: T; new: T }) => void
   onDelete?: (payload: T) => void
@@ -84,6 +84,11 @@ export function useRealtime<T = unknown>({
   }
 
   useEffect(() => {
+    // Если filter === undefined, не подписываемся (disabled)
+    if (filter === undefined) {
+      return
+    }
+
     const supabase = createClient()
 
     // Создаем уникальное имя канала

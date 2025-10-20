@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { Card } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -20,11 +20,7 @@ export function MessagesContent({ userId }: MessagesContentProps) {
   const [conversations, setConversations] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    loadConversations()
-  }, [userId])
-
-  async function loadConversations() {
+  const loadConversations = useCallback(async () => {
     setLoading(true)
     try {
       const data = await getConversations(userId)
@@ -35,7 +31,11 @@ export function MessagesContent({ userId }: MessagesContentProps) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [userId])
+
+  useEffect(() => {
+    loadConversations()
+  }, [loadConversations])
 
   if (loading) {
     return (

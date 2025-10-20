@@ -1,5 +1,13 @@
 import { createClient } from "@/lib/supabase/client"
 
+/**
+ * Friends API with Context7 Best Practices
+ * - Explicit filters for better query plans
+ * - Limited columns selection
+ * - Safe pagination
+ * - Optimized for RLS performance
+ */
+
 export type FriendshipStatus = "pending" | "accepted" | "rejected" | "blocked"
 
 export interface Friendship {
@@ -21,16 +29,20 @@ export interface FriendProfile {
 
 /**
  * Получить статус дружбы между двумя пользователями
+ * Context7 Optimization: Explicit filters + specific columns
  */
 export async function getFriendshipStatus(userId: string, friendId: string) {
   const supabase = createClient()
 
+  // Context7: Select only needed columns
+  const columns = 'id, user_id, friend_id, status, created_at, accepted_at'
+
   // Проверяем в обе стороны - сначала в одном направлении
   let { data, error } = await supabase
     .from("friendships")
-    .select("*")
-    .eq("user_id", userId)
-    .eq("friend_id", friendId)
+    .select(columns)
+    .eq("user_id", userId)     // Explicit filter 1
+    .eq("friend_id", friendId) // Explicit filter 2
     .maybeSingle()
 
   if (error && error.code !== "PGRST116") {
@@ -42,9 +54,9 @@ export async function getFriendshipStatus(userId: string, friendId: string) {
   if (!data) {
     const result = await supabase
       .from("friendships")
-      .select("*")
-      .eq("user_id", friendId)
-      .eq("friend_id", userId)
+      .select(columns)
+      .eq("user_id", friendId)  // Explicit filter 1
+      .eq("friend_id", userId)  // Explicit filter 2
       .maybeSingle()
 
     if (result.error && result.error.code !== "PGRST116") {
@@ -197,18 +209,27 @@ export async function blockUser(userId: string, friendId: string) {
 
 /**
  * Получить список друзей пользователя
+ * Context7 Optimization: Explicit filters + limits + specific columns
  */
-export async function getFriends(userId: string) {
+export async function getFriends(userId: string, limit: number = 100) {
   const supabase = createClient()
 
   console.log("[getFriends] Fetching friends for user:", userId)
+
+  // Context7: Safe limit
+  const safeLimit = Math.min(limit, 200)
 
   // Получаем друзей где текущий пользователь - инициатор (user_id)
   const { data: sentFriends, error: sentError } = await supabase
     .from("friendships")
     .select(
       `
-      *,
+      id,
+      user_id,
+      friend_id,
+      status,
+      created_at,
+      accepted_at,
       friend:friend_id (
         id,
         username,
@@ -218,9 +239,10 @@ export async function getFriends(userId: string) {
       )
     `
     )
-    .eq("user_id", userId)
-    .eq("status", "accepted")
+    .eq("user_id", userId)      // Explicit filter 1
+    .eq("status", "accepted")   // Explicit filter 2
     .order("accepted_at", { ascending: false })
+    .limit(safeLimit)            // Context7: Always add limits
 
   if (sentError) {
     console.error("[getFriends] Error getting sent friends:", sentError)
@@ -231,7 +253,12 @@ export async function getFriends(userId: string) {
     .from("friendships")
     .select(
       `
-      *,
+      id,
+      user_id,
+      friend_id,
+      status,
+      created_at,
+      accepted_at,
       user:user_id (
         id,
         username,
@@ -241,9 +268,10 @@ export async function getFriends(userId: string) {
       )
     `
     )
-    .eq("friend_id", userId)
-    .eq("status", "accepted")
+    .eq("friend_id", userId)     // Explicit filter 1
+    .eq("status", "accepted")    // Explicit filter 2
     .order("accepted_at", { ascending: false })
+    .limit(safeLimit)             // Context7: Always add limits
 
   if (receivedError) {
     console.error("[getFriends] Error getting received friends:", receivedError)
@@ -261,17 +289,25 @@ export async function getFriends(userId: string) {
 
 /**
  * Получить входящие запросы в друзья
+ * Context7 Optimization: Explicit filters + limits
  */
-export async function getIncomingRequests(userId: string) {
+export async function getIncomingRequests(userId: string, limit: number = 50) {
   const supabase = createClient()
 
   console.log("[getIncomingRequests] Fetching incoming requests for user:", userId)
+
+  // Context7: Safe limit
+  const safeLimit = Math.min(limit, 100)
 
   const { data, error } = await supabase
     .from("friendships")
     .select(
       `
-      *,
+      id,
+      user_id,
+      friend_id,
+      status,
+      created_at,
       requester:user_id (
         id,
         username,
@@ -281,9 +317,10 @@ export async function getIncomingRequests(userId: string) {
       )
     `
     )
-    .eq("friend_id", userId)
-    .eq("status", "pending")
+    .eq("friend_id", userId)   // Explicit filter 1
+    .eq("status", "pending")   // Explicit filter 2
     .order("created_at", { ascending: false })
+    .limit(safeLimit)           // Context7: Always add limits
 
   if (error) {
     console.error("[getIncomingRequests] Error getting incoming requests:", error)
@@ -296,17 +333,25 @@ export async function getIncomingRequests(userId: string) {
 
 /**
  * Получить исходящие запросы в друзья
+ * Context7 Optimization: Explicit filters + limits
  */
-export async function getOutgoingRequests(userId: string) {
+export async function getOutgoingRequests(userId: string, limit: number = 50) {
   const supabase = createClient()
 
   console.log("[getOutgoingRequests] Fetching outgoing requests for user:", userId)
+
+  // Context7: Safe limit
+  const safeLimit = Math.min(limit, 100)
 
   const { data, error } = await supabase
     .from("friendships")
     .select(
       `
-      *,
+      id,
+      user_id,
+      friend_id,
+      status,
+      created_at,
       friend:friend_id (
         id,
         username,
@@ -316,9 +361,10 @@ export async function getOutgoingRequests(userId: string) {
       )
     `
     )
-    .eq("user_id", userId)
-    .eq("status", "pending")
+    .eq("user_id", userId)      // Explicit filter 1
+    .eq("status", "pending")    // Explicit filter 2
     .order("created_at", { ascending: false })
+    .limit(safeLimit)            // Context7: Always add limits
 
   if (error) {
     console.error("[getOutgoingRequests] Error getting outgoing requests:", error)

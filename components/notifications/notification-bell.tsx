@@ -32,9 +32,10 @@ export function NotificationBell() {
     loadUnreadCount()
   }, [userId])
 
-  // Realtime подписка на уведомления
+  // Realtime подписка на уведомления (только если userId валиден)
   useNotificationsRealtime({
-    userId: userId || "",
+    userId: userId || undefined,
+    enabled: !!userId, // Явно указываем, когда включать подписку
     onNewNotification: (notification) => {
       setUnreadCount((prev) => prev + 1)
       toast.info(notification.title || "Новое уведомление", {

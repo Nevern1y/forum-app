@@ -44,7 +44,8 @@ export function MobileNavigation({ username }: MobileNavigationProps) {
 
   // Realtime подписка на уведомления
   useNotificationsRealtime({
-    userId: userId || "",
+    userId: userId || undefined,
+    enabled: !!userId,
     onNewNotification: () => {
       setUnreadCount((prev) => prev + 1)
     },
@@ -55,7 +56,8 @@ export function MobileNavigation({ username }: MobileNavigationProps) {
 
   // Realtime подписка на сообщения
   useMessagesRealtime({
-    userId: userId || "",
+    userId: userId || undefined,
+    enabled: !!userId,
     onNewMessage: () => {
       setUnreadMessagesCount((prev) => prev + 1)
     },

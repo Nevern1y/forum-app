@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { ArrowLeft, Send, Image as ImageIcon, Mic, Loader2, ExternalLink, Eye } from "lucide-react"
 import { toast } from "sonner"
 import Link from "next/link"
+import Image from "next/image"
 import { useRouter } from "next/navigation"
 import {
   getOrCreateConversation,
@@ -25,6 +26,16 @@ import { VoiceRecorder } from "@/components/media/voice-recorder"
 import { OnlineIndicator } from "@/components/presence/online-indicator"
 import { TypingIndicator, useTypingIndicator } from "./typing-indicator"
 import { AudioPlayerCompact } from "@/components/media/audio-player-compact"
+
+/**
+ * Proxy Supabase Storage images through Next.js API to fix CORP issues
+ */
+function getProxiedImageUrl(url: string | null | undefined): string | undefined {
+  if (!url) return undefined
+  if (!url.includes('supabase.co/storage')) return url
+  
+  return `/api/image-proxy?url=${encodeURIComponent(url)}`
+}
 
 // Функция для удаления markdown синтаксиса
 function stripMarkdown(text: string): string {
@@ -393,12 +404,21 @@ export function ChatWindow({ currentUserId, otherUser, embedded = false, onClose
                         message.media_urls.length > 1 ? "grid-cols-2" : "grid-cols-1"
                       )}>
                         {message.media_urls.map((url: string, idx: number) => (
-                          <img
-                            key={idx}
-                            src={url}
-                            alt=""
-                            className="max-h-60 w-full object-cover cursor-pointer"
-                          />
+                          <div key={idx} className="relative w-full bg-muted">
+                            <Image
+                              src={url}
+                              alt="Message image"
+                              width={600}
+                              height={400}
+                              className="w-full h-auto max-h-96 object-contain cursor-pointer hover:opacity-90 transition-opacity"
+                              sizes="(max-width: 768px) 70vw, 60vw"
+                              onError={(e) => {
+                                console.error('Image failed to load:', url)
+                                // Показываем placeholder при ошибке
+                                e.currentTarget.style.display = 'none'
+                              }}
+                            />
+                          </div>
                         ))}
                       </div>
                     )}
@@ -421,6 +441,18 @@ export function ChatWindow({ currentUserId, otherUser, embedded = false, onClose
                         )}
                       >
                         {/* Shared Post */}
+                        {message.shared_post_id && message.shared_post && (() => {
+                          // Debug logging
+                          if (process.env.NODE_ENV === 'development') {
+                            console.log('Shared post data:', {
+                              id: message.shared_post_id,
+                              title: message.shared_post.title,
+                              media_urls: message.shared_post.media_urls,
+                              has_media: message.shared_post.media_urls && message.shared_post.media_urls.length > 0
+                            })
+                          }
+                          return null
+                        })()}
                         {message.shared_post_id && message.shared_post && (
                           <Link
                             href={`/post/${message.shared_post_id}`}
@@ -436,9 +468,17 @@ export function ChatWindow({ currentUserId, otherUser, embedded = false, onClose
                               <>
                                 <div className="relative w-full h-40 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 overflow-hidden">
                                   <img
-                                    src={message.shared_post.media_urls[0]}
+                                    src={getProxiedImageUrl(message.shared_post.media_urls[0])}
                                     alt={message.shared_post.title}
                                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                    onLoad={() => {
+                                      if (process.env.NODE_ENV === 'development') {
+                                        console.log('✅ Shared post image loaded successfully')
+                                      }
+                                    }}
+                                    onError={(e) => {
+                                      console.error('❌ Shared post image failed to load:', message.shared_post.media_urls[0])
+                                    }}
                                   />
                                   {message.shared_post.media_urls.length > 1 && (
                                     <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-sm text-white text-xs px-2 py-1 rounded-full font-medium">
@@ -537,8 +577,14 @@ export function ChatWindow({ currentUserId, otherUser, embedded = false, onClose
         {mediaUrls.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-3">
             {mediaUrls.map((url, idx) => (
-              <div key={idx} className="relative group">
-                <img src={url} alt="" className="h-20 w-20 object-cover rounded-lg border border-border dark:border-[#2a2a2a]" />
+              <div key={idx} className="relative group w-20 h-20">
+                <Image
+                  src={url}
+                  alt="Upload preview"
+                  fill
+                  className="object-cover rounded-lg border border-border dark:border-[#2a2a2a]"
+                  sizes="80px"
+                />
                 <button
                   type="button"
                   onClick={() => setMediaUrls(mediaUrls.filter((_, i) => i !== idx))}

@@ -33,3 +33,19 @@ next-env.d.ts
 /public/sw.js.map
 /public/workbox-*.js.map
 /public/worker-*.js.map
+
+# temp files
+*.log
+*.tmp
+*.cache
+*.old
+*.bak
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~

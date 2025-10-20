@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, memo } from "react"
 import { CommentItem } from "@/components/post/comment-item"
 import { useCommentsRealtime } from "@/hooks/use-comments-realtime"
 import { createClient } from "@/lib/supabase/client"
@@ -27,7 +27,7 @@ interface CommentListProps {
   postId: string
 }
 
-export function CommentList({ comments: initialComments, postId }: CommentListProps) {
+const CommentListComponent = ({ comments: initialComments, postId }: CommentListProps) => {
   const [comments, setComments] = useState<Comment[]>(initialComments)
 
   // Realtime подписка на комментарии
@@ -79,3 +79,17 @@ export function CommentList({ comments: initialComments, postId }: CommentListPr
     </div>
   )
 }
+
+// Мемоизация для предотвращения ненужных ре-рендеров
+export const CommentList = memo(CommentListComponent, (prevProps, nextProps) => {
+  // Перерендерить только если изменились комментарии или postId
+  return (
+    prevProps.postId === nextProps.postId &&
+    prevProps.comments.length === nextProps.comments.length &&
+    prevProps.comments.every((comment, index) => 
+      comment.id === nextProps.comments[index]?.id &&
+      comment.likes === nextProps.comments[index]?.likes &&
+      comment.dislikes === nextProps.comments[index]?.dislikes
+    )
+  )
+})

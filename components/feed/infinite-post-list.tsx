@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef, useMemo } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { createClient } from "@/lib/supabase/client"
 import { PostCard } from "./post-card"
@@ -81,7 +81,7 @@ export function InfinitePostList({ initialPosts, sortBy }: InfinitePostListProps
     },
   })
 
-  const loadMorePosts = async (prefetch = false) => {
+  const loadMorePosts = useCallback(async (prefetch = false) => {
     if (isLoading || !hasMore) return
 
     if (!prefetch) setIsLoading(true)
@@ -126,7 +126,7 @@ export function InfinitePostList({ initialPosts, sortBy }: InfinitePostListProps
     } finally {
       if (!prefetch) setIsLoading(false)
     }
-  }
+  }, [page, sortBy, isLoading, hasMore])
 
   // Prefetch следующей страницы когда пользователь приближается к концу
   useEffect(() => {
@@ -140,7 +140,7 @@ export function InfinitePostList({ initialPosts, sortBy }: InfinitePostListProps
         loadMorePosts(true) // Тихая предзагрузка
       }
     }
-  }, [rowVirtualizer.getVirtualItems(), posts.length, hasMore, isLoading])
+  }, [rowVirtualizer, posts.length, hasMore, isLoading, loadMorePosts])
 
   useEffect(() => {
     // Setup intersection observer for infinite scroll
@@ -162,16 +162,16 @@ export function InfinitePostList({ initialPosts, sortBy }: InfinitePostListProps
         observerRef.current.disconnect()
       }
     }
-  }, [hasMore, isLoading, page, sortBy])
+  }, [hasMore, isLoading, loadMorePosts])
 
   // Reset when sort changes
   useEffect(() => {
     setPosts(initialPosts)
     setPage(1)
     setHasMore(initialPosts.length === POSTS_PER_PAGE)
-  }, [sortBy])
+  }, [sortBy, initialPosts])
 
-  const loadNewPosts = async () => {
+  const loadNewPosts = useCallback(async () => {
     setIsLoading(true)
     const supabase = createClient()
 
@@ -201,7 +201,7 @@ export function InfinitePostList({ initialPosts, sortBy }: InfinitePostListProps
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
 
   const virtualItems = rowVirtualizer.getVirtualItems()
 

@@ -1,6 +1,10 @@
 /**
- * Search API
+ * Search API with Context7 Best Practices
  * Full-Text Search with filters
+ * - Explicit filters for better query plans
+ * - Limited columns selection
+ * - Safe pagination
+ * - Optimized fallback queries
  */
 
 import { createClient } from '@/lib/supabase/client'
@@ -49,13 +53,19 @@ export interface SearchSuggestion {
 
 /**
  * Search posts with filters
+ * Context7 Optimization: Safe pagination + proper fallback
  */
 export async function searchPosts(filters: SearchFilters): Promise<SearchResult[]> {
   const supabase = createClient()
   
+  // Context7: Safe pagination
+  const safePageSize = Math.min(filters.pageSize || 20, 100)
+  const safePageOffset = Math.max(filters.pageOffset || 0, 0)
+  
   console.log('[Search] Calling search_posts with:', {
     search_query: filters.query || '',
     sort_by: filters.sortBy || 'relevance',
+    page_size: safePageSize,
   })
   
   const { data, error } = await supabase.rpc('search_posts', {
@@ -65,15 +75,15 @@ export async function searchPosts(filters: SearchFilters): Promise<SearchResult[
     date_from: filters.dateFrom || null,
     date_to: filters.dateTo || null,
     sort_by: filters.sortBy || 'relevance',
-    page_size: filters.pageSize || 20,
-    page_offset: filters.pageOffset || 0
+    page_size: safePageSize,      // Context7: Safe limit
+    page_offset: safePageOffset   // Context7: Safe offset
   })
   
   if (error) {
     console.error('[Search] RPC Error:', error)
     console.error('[Search] Error details:', JSON.stringify(error, null, 2))
     
-    // Fallback: простой запрос без RPC
+    // Context7 Fallback: Simple query with explicit filters
     console.log('[Search] Trying fallback search...')
     const { data: fallbackData, error: fallbackError } = await supabase
       .from('posts')
@@ -90,8 +100,8 @@ export async function searchPosts(filters: SearchFilters): Promise<SearchResult[
           avatar_url
         )
       `)
-      .ilike('title', `%${filters.query}%`)
-      .limit(filters.pageSize || 20)
+      .ilike('title', `%${filters.query}%`) // Explicit filter
+      .limit(safePageSize)                    // Context7: Safe limit
       .order('created_at', { ascending: false })
     
     if (fallbackError) {
@@ -126,13 +136,17 @@ export async function searchPosts(filters: SearchFilters): Promise<SearchResult[
 
 /**
  * Search users (for autocomplete)
+ * Context7 Optimization: Safe limits
  */
 export async function searchUsers(query: string, limit = 10): Promise<UserSearchResult[]> {
   const supabase = createClient()
   
+  // Context7: Safe limit for autocomplete
+  const safeLimit = Math.min(limit, 50)
+  
   const { data, error } = await supabase.rpc('search_users', {
     search_query: query,
-    result_limit: limit
+    result_limit: safeLimit // Context7: Safe limit
   })
   
   if (error) {
@@ -145,13 +159,17 @@ export async function searchUsers(query: string, limit = 10): Promise<UserSearch
 
 /**
  * Get autocomplete suggestions
+ * Context7 Optimization: Safe limits
  */
 export async function getSearchSuggestions(prefix: string, limit = 5): Promise<SearchSuggestion[]> {
   const supabase = createClient()
   
+  // Context7: Safe limit for suggestions
+  const safeLimit = Math.min(limit, 20)
+  
   const { data, error } = await supabase.rpc('get_search_suggestions', {
     search_prefix: prefix,
-    result_limit: limit
+    result_limit: safeLimit // Context7: Safe limit
   })
   
   if (error) {
@@ -164,10 +182,15 @@ export async function getSearchSuggestions(prefix: string, limit = 5): Promise<S
 
 /**
  * Get popular tags (for filter dropdown)
+ * Context7 Optimization: Explicit filters + safe limits
  */
 export async function getPopularTags(limit = 20) {
   const supabase = createClient()
   
+  // Context7: Safe limit
+  const safeLimit = Math.min(limit, 100)
+  
+  // Context7: Select specific columns + safe limit
   const { data, error } = await supabase
     .from('tags')
     .select(`
@@ -176,7 +199,7 @@ export async function getPopularTags(limit = 20) {
       post_tags (count)
     `)
     .order('post_tags.count', { ascending: false })
-    .limit(limit)
+    .limit(safeLimit) // Context7: Safe limit
   
   if (error) {
     console.error('[Search] Error getting popular tags:', error)

@@ -46,21 +46,32 @@ export async function getOrCreateConversation(user1Id: string, user2Id: string) 
 
 /**
  * Получить список бесед пользователя
+ * Context7 Optimization: Explicit filters + limited columns
  */
 export async function getConversations(userId: string) {
   const supabase = createClient()
 
+  // Context7 Best Practice: Add explicit filter even with RLS
+  // This helps PostgreSQL build better query plans
   const { data, error } = await supabase
     .from("conversations")
     .select(
       `
-      *,
+      id,
+      user1_id,
+      user2_id,
+      last_message_at,
+      last_message_preview,
+      unread_count_user1,
+      unread_count_user2,
+      created_at,
       user1:user1_id (id, username, display_name, avatar_url),
       user2:user2_id (id, username, display_name, avatar_url)
     `
     )
-    .or(`user1_id.eq.${userId},user2_id.eq.${userId}`)
+    .or(`user1_id.eq.${userId},user2_id.eq.${userId}`) // Explicit filter!
     .order("last_message_at", { ascending: false })
+    .limit(50) // Context7: Always add limits
 
   if (error) {
     console.error("Error getting conversations:", error)
@@ -106,11 +117,16 @@ export async function getConversations(userId: string) {
 
 /**
  * Получить сообщения из беседы
+ * Context7 Optimization: Explicit filters + safe limits
  */
 export async function getMessages(conversationId: string, limit: number = 50) {
   const supabase = createClient()
+  
+  // Context7 Best Practice: Limit max page size
+  const safeLimit = Math.min(limit, 100)
 
   try {
+    // Context7 Best Practice: Explicit filter for better query plans
     const { data, error } = await supabase
       .from("direct_messages")
       .select(
@@ -129,9 +145,9 @@ export async function getMessages(conversationId: string, limit: number = 50) {
         sender:sender_id (id, username, display_name, avatar_url)
       `
       )
-      .eq("conversation_id", conversationId)
+      .eq("conversation_id", conversationId) // Explicit filter!
       .order("created_at", { ascending: false })
-      .limit(limit)
+      .limit(safeLimit) // Safe limit
 
     if (error) {
       console.error("Error getting messages:", error)
@@ -146,10 +162,12 @@ export async function getMessages(conversationId: string, limit: number = 50) {
 
     if (postIds.length > 0) {
       try {
+        // Context7: Select only needed columns
         const { data: posts, error: postsError } = await supabase
           .from("posts")
           .select("id, title, views, media_urls")
-          .in("id", postIds)
+          .in("id", postIds) // Explicit filter
+          .limit(postIds.length) // Exact limit
 
         if (postsError) {
           console.error("Error loading posts for messages:", postsError)
@@ -212,19 +230,21 @@ export async function sendMessage(
 
 /**
  * Пометить сообщения как прочитанные
+ * Context7 Optimization: Explicit filters for performance
  */
 export async function markMessagesAsRead(conversationId: string, userId: string) {
   const supabase = createClient()
 
+  // Context7: Multiple explicit filters for better index usage
   const { error } = await supabase
     .from("direct_messages")
     .update({
       is_read: true,
       read_at: new Date().toISOString(),
     })
-    .eq("conversation_id", conversationId)
-    .eq("receiver_id", userId)
-    .eq("is_read", false)
+    .eq("conversation_id", conversationId) // Explicit filter 1
+    .eq("receiver_id", userId)              // Explicit filter 2
+    .eq("is_read", false)                   // Explicit filter 3
 
   if (error) {
     console.error("Error marking messages as read:", error)

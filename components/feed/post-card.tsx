@@ -1,11 +1,11 @@
 "use client"
 
-import { useState, useEffect, memo } from "react"
+import { useState, useEffect, memo, useCallback } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import Link from "next/link"
 import { formatDistanceToNow } from "date-fns"
 import { ru } from "date-fns/locale"
-import { MessageSquare, Eye, ThumbsUp, ThumbsDown, Pin, Share2 } from "lucide-react"
+import { MessageSquare, Eye, ThumbsUp, ThumbsDown, Pin } from "lucide-react"
 import { MediaGallery } from "@/components/media/media-gallery"
 import { AudioPlayerCompact } from "@/components/media/audio-player-compact"
 import { SharePostButton } from "@/components/post/share-post-button"
@@ -103,6 +103,7 @@ const PostCardComponent = ({ post }: PostCardProps) => {
     setUserReaction(post.user_reaction || null)
     setLikesCount(post.likes || 0)
     setDislikesCount(post.dislikes || 0)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [post.id]) // Только при смене post.id, НЕ при изменении счётчиков!
   
   // Display plain text (no markdown) content for preview
@@ -119,7 +120,7 @@ const PostCardComponent = ({ post }: PostCardProps) => {
     totalTextLength > 350 ? 'large' : 
     'medium'
 
-  const handleReaction = async (reactionType: 'like' | 'dislike', e: React.MouseEvent) => {
+  const handleReaction = useCallback(async (reactionType: 'like' | 'dislike', e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
     
@@ -239,7 +240,7 @@ const PostCardComponent = ({ post }: PostCardProps) => {
       toast.error('Ошибка при обновлении реакции')
       setIsReacting(false)
     }
-  }
+  }, [userReaction, likesCount, dislikesCount, isReacting, post.id])
 
   return (
     <article className={`threads-post group relative ${post.is_pinned ? "bg-primary/5" : ""}`}>

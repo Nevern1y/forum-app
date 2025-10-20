@@ -1,6 +1,10 @@
 /**
- * Subscriptions API
+ * Subscriptions API with Context7 Best Practices
  * Follow/Unfollow functionality
+ * - Explicit filters for better query plans
+ * - Limited columns selection
+ * - Safe pagination
+ * - Optimized for RLS performance
  */
 
 import { createClient } from '@/lib/supabase/client'
@@ -36,6 +40,7 @@ export async function toggleFollow(targetUserId: string): Promise<FollowResult> 
 
 /**
  * Check if current user follows target user
+ * Context7 Optimization: Explicit filters + limited columns
  */
 export async function checkIfFollowing(targetUserId: string): Promise<boolean> {
   const supabase = createClient()
@@ -43,11 +48,12 @@ export async function checkIfFollowing(targetUserId: string): Promise<boolean> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return false
   
+  // Context7: Select only needed column + explicit filters
   const { data, error } = await supabase
     .from('subscriptions')
-    .select('id')
-    .eq('follower_id', user.id)
-    .eq('following_id', targetUserId)
+    .select('id') // Only needed column
+    .eq('follower_id', user.id)       // Explicit filter 1
+    .eq('following_id', targetUserId) // Explicit filter 2
     .maybeSingle()
   
   if (error) {
@@ -77,10 +83,15 @@ export async function getUserFollowStats(userId: string): Promise<FollowStats> {
 
 /**
  * Get list of followers for a user
+ * Context7 Optimization: Explicit filters + safe limits
  */
 export async function getFollowers(userId: string, limit = 50) {
   const supabase = createClient()
   
+  // Context7: Safe limit
+  const safeLimit = Math.min(limit, 200)
+  
+  // Context7: Explicit filter + safe limit
   const { data, error } = await supabase
     .from('subscriptions')
     .select(`
@@ -94,9 +105,9 @@ export async function getFollowers(userId: string, limit = 50) {
         reputation
       )
     `)
-    .eq('following_id', userId)
+    .eq('following_id', userId) // Explicit filter!
     .order('created_at', { ascending: false })
-    .limit(limit)
+    .limit(safeLimit) // Context7: Safe limit
   
   if (error) {
     console.error('[Subscriptions] Get followers error:', error)
@@ -108,10 +119,15 @@ export async function getFollowers(userId: string, limit = 50) {
 
 /**
  * Get list of users that the user is following
+ * Context7 Optimization: Explicit filters + safe limits
  */
 export async function getFollowing(userId: string, limit = 50) {
   const supabase = createClient()
   
+  // Context7: Safe limit
+  const safeLimit = Math.min(limit, 200)
+  
+  // Context7: Explicit filter + safe limit
   const { data, error } = await supabase
     .from('subscriptions')
     .select(`
@@ -125,9 +141,9 @@ export async function getFollowing(userId: string, limit = 50) {
         reputation
       )
     `)
-    .eq('follower_id', userId)
+    .eq('follower_id', userId) // Explicit filter!
     .order('created_at', { ascending: false })
-    .limit(limit)
+    .limit(safeLimit) // Context7: Safe limit
   
   if (error) {
     console.error('[Subscriptions] Get following error:', error)
@@ -139,13 +155,17 @@ export async function getFollowing(userId: string, limit = 50) {
 
 /**
  * Get personalized feed (posts from followed users)
+ * Context7 Optimization: Safe pagination
  */
 export async function getFollowingFeed(pageSize = 20, pageOffset = 0) {
   const supabase = createClient()
   
+  // Context7: Safe page size
+  const safePageSize = Math.min(pageSize, 100)
+  
   const { data, error } = await supabase
     .rpc('get_following_feed', {
-      page_size: pageSize,
+      page_size: safePageSize, // Context7: Safe limit
       page_offset: pageOffset
     })
   

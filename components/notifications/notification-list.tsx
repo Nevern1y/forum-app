@@ -1,11 +1,11 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
-import { Loader2, CheckCheck, Trash2, Bell, BellOff, Sparkles } from "lucide-react"
+import { Loader2, CheckCheck, Trash2, BellOff } from "lucide-react"
 import { toast } from "sonner"
 import Link from "next/link"
 import {
@@ -30,11 +30,7 @@ export function NotificationList({ userId, onNotificationsRead, onClose }: Notif
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
 
-  useEffect(() => {
-    loadNotifications()
-  }, [userId])
-
-  async function loadNotifications() {
+  const loadNotifications = useCallback(async () => {
     setLoading(true)
     try {
       const data = await getNotifications(userId)
@@ -45,9 +41,13 @@ export function NotificationList({ userId, onNotificationsRead, onClose }: Notif
     } finally {
       setLoading(false)
     }
-  }
+  }, [userId])
 
-  async function handleMarkAsRead(notificationId: string, link: string | null) {
+  useEffect(() => {
+    loadNotifications()
+  }, [loadNotifications])
+
+  const handleMarkAsRead = useCallback(async (notificationId: string, link: string | null) => {
     try {
       await markNotificationAsRead(notificationId)
       setNotifications((prev) =>
@@ -62,9 +62,9 @@ export function NotificationList({ userId, onNotificationsRead, onClose }: Notif
     } catch (error) {
       console.error("Error marking as read:", error)
     }
-  }
+  }, [onNotificationsRead, onClose])
 
-  async function handleMarkAllAsRead() {
+  const handleMarkAllAsRead = useCallback(async () => {
     setActionLoading("all")
     try {
       await markAllNotificationsAsRead(userId)
@@ -79,9 +79,9 @@ export function NotificationList({ userId, onNotificationsRead, onClose }: Notif
     } finally {
       setActionLoading(null)
     }
-  }
+  }, [userId, onNotificationsRead])
 
-  async function handleDelete(notificationId: string) {
+  const handleDelete = useCallback(async (notificationId: string) => {
     setActionLoading(notificationId)
     try {
       await deleteNotification(notificationId)
@@ -93,7 +93,7 @@ export function NotificationList({ userId, onNotificationsRead, onClose }: Notif
     } finally {
       setActionLoading(null)
     }
-  }
+  }, [])
 
   if (loading) {
     return (

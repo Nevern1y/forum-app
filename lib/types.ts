@@ -1,5 +1,16 @@
 // Основные типы для приложения
 
+// Placeholder for Supabase generated types
+// In production, generate with: supabase gen types typescript --local
+export type Database = {
+  public: {
+    Tables: Record<string, any>
+    Views: Record<string, any>
+    Functions: Record<string, any>
+    Enums: Record<string, any>
+  }
+}
+
 export interface User {
   id: string
   username: string
