@@ -11,10 +11,10 @@ interface RateLimitConfig {
 const rateLimitStore = new Map<string, number[]>()
 
 export const RATE_LIMITS: Record<string, RateLimitConfig> = {
-  AUTH_LOGIN: { interval: 15 * 60 * 1000, max: 5 },
-  AUTH_SIGNUP: { interval: 60 * 60 * 1000, max: 3 },
+  AUTH_API: { interval: 15 * 60 * 1000, max: 10 }, // API auth endpoints only
   API_GENERAL: { interval: 60 * 1000, max: 100 },
   API_READ: { interval: 60 * 1000, max: 200 },
+  PAGE: { interval: 60 * 1000, max: 500 }, // Very permissive for pages
 }
 
 export function getClientId(ip: string, userAgent: string | null): string {
@@ -39,9 +39,12 @@ export function isRateLimited(clientId: string, config: RateLimitConfig) {
 }
 
 export function getRateLimitConfig(pathname: string): RateLimitConfig {
-  if (pathname.includes('/auth/')) return RATE_LIMITS.AUTH_LOGIN
+  // API endpoints have stricter limits
+  if (pathname.startsWith('/api/auth/')) return RATE_LIMITS.AUTH_API
   if (pathname.startsWith('/api/')) return RATE_LIMITS.API_GENERAL
-  return RATE_LIMITS.API_READ
+  
+  // Pages have very permissive limits (just to prevent DDoS)
+  return RATE_LIMITS.PAGE
 }
 
 export function getRateLimitHeaders(config: RateLimitConfig, result: ReturnType<typeof isRateLimited>) {

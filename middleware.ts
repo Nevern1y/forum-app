@@ -24,12 +24,15 @@ import {
 import { NextResponse, type NextRequest } from "next/server"
 
 const isDev = process.env.NODE_ENV === 'development'
+const isVercel = !!process.env.VERCEL
+const disableRateLimit = process.env.DISABLE_RATE_LIMIT === 'true' || isVercel
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // 1. Rate Limiting (skip in development)
-  if (!isDev && !pathname.startsWith('/_next')) {
+  // 1. Rate Limiting (skip in development, Vercel, or if disabled)
+  // Note: Vercel has its own DDoS protection, and our in-memory store doesn't work in serverless
+  if (!isDev && !disableRateLimit && !pathname.startsWith('/_next')) {
     const forwarded = request.headers.get('x-forwarded-for')
     const ip = forwarded ? forwarded.split(',')[0] : request.headers.get('x-real-ip') || 'unknown'
     const userAgent = request.headers.get('user-agent')
@@ -58,8 +61,8 @@ export async function middleware(request: NextRequest) {
   // 5. Add nonce to response headers for use in components
   response.headers.set('x-nonce', nonce)
 
-  // 6. Add Rate Limit Headers (if not limited)
-  if (!isDev && !pathname.startsWith('/_next')) {
+  // 6. Add Rate Limit Headers (if not limited and rate limiting is enabled)
+  if (!isDev && !disableRateLimit && !pathname.startsWith('/_next')) {
     const forwarded = request.headers.get('x-forwarded-for')
     const ip = forwarded ? forwarded.split(',')[0] : request.headers.get('x-real-ip') || 'unknown'
     const userAgent = request.headers.get('user-agent')
