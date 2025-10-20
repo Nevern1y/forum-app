@@ -66,25 +66,20 @@ export function getCSPDirectives(nonce: string, isDev: boolean = false): CSPDire
     }
   }
 
-  // Production: Strict CSP with Supabase compatibility
+  // Production: Relaxed CSP for Next.js + Supabase compatibility
+  // Using unsafe-inline instead of nonces due to Next.js dynamic inline styles
   return {
     'default-src': ["'self'"],
-    // Context7: nonce + strict-dynamic allows only nonce-tagged scripts
-    // unsafe-inline added as fallback for browsers without nonce support
     'script-src': [
       "'self'",
-      `'nonce-${nonce}'`,
-      "'strict-dynamic'",
-      "'unsafe-inline'", // Fallback for older browsers
+      "'unsafe-inline'", // Required for Next.js inline scripts
+      "'unsafe-eval'", // Required for Next.js
       'https://vercel.live', // Vercel Analytics
       'https://va.vercel-scripts.com', // Vercel Analytics
     ],
-    // Context7: nonce for inline styles + unsafe-inline as fallback
-    // unsafe-inline is needed for Next.js inline styles and won't be used if nonce is supported
     'style-src': [
       "'self'",
-      `'nonce-${nonce}'`,
-      "'unsafe-inline'", // Fallback for browsers without nonce support
+      "'unsafe-inline'", // Required for Next.js inline styles
       'https://fonts.googleapis.com',
     ],
     'img-src': [
