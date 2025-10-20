@@ -4,7 +4,7 @@
   "framework": "nextjs",
   "regions": ["iad1"],
   "env": {
-    "NEXT_PUBLIC_SUPABASE_URL": "@supabase_url",
-    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "@supabase_anon_key"
+    "NEXT_PUBLIC_SUPABASE_URL": "https://teftcesgqqwhqhdiornh.supabase.co",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRlZnRjZXNncXF3aHFoZGlvcm5oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAxODMxNjYsImV4cCI6MjA3NTc1OTE2Nn0.4j03MFTcS8pFCOrz1z1U0JXZA2UxNn7mrqtL1WYIk0Q"
   }
 }
