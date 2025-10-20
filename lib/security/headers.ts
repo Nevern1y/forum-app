@@ -58,10 +58,10 @@ export function getSecurityHeaders(cspHeader: string): SecurityHeaders {
     ].join(', '),
     
     // Cross-Origin Policies
-    // Context7: Isolate from other origins
-    'Cross-Origin-Opener-Policy': 'same-origin',
-    'Cross-Origin-Resource-Policy': 'same-origin',
-    'Cross-Origin-Embedder-Policy': 'require-corp',
+    // Context7: Relaxed for Supabase compatibility
+    'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
+    'Cross-Origin-Resource-Policy': 'cross-origin',
+    // Removed Cross-Origin-Embedder-Policy to allow Supabase
   }
 }
 
